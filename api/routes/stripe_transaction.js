@@ -231,16 +231,12 @@ const createOrder = async (customer, data) => {
 
 router.post('/webhook', express.json({ type: "application/json" }), (request, response) => {
   const sig = request.headers['stripe-signature'];
-  console.log("SIG " + JSON.stringify(sig))
-
-  const endpointSecret = "whsec_65cfd21fa15470dfc689176d428b95baac3294fce4b1f0415af4d9527322d7ae";
-  console.log("END POINT SECRET " + JSON.stringify(endpointSecret))
+  const endpointSecret = process.env.STRIPE_SECRET;
   let event;
 
   try {
     event = stripe.webhooks.constructEvent(request.body, sig, endpointSecret);
   } catch (err) {
-    console.log(JSON.stringify(err))
     response.status(400).send(`Webhook Error: ${err.message}`);
     return;
   }
