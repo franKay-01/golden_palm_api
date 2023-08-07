@@ -1,7 +1,9 @@
 const express = require('express');
 const router = express.Router();
+require('dotenv').config();
+
 const { StripeTransactionInfo, Orders } = require('../../models');
-const stripe = require('stripe')('sk_test_51NSUKABozIprrApfjBLBfdYzgdfxtML7IrPlvivhekTKskRetoGx8y3luTVwQhJjQnsvp7fbruXUoa2eRm5bEzOA00zvB4hLrN');
+const stripe = require('stripe')(process.env.STRIPE_KEY);
 const authenticateJWT = require('../../middleware/authenticate')
 const { Worker } = require('worker_threads');
 const { formattedDate } = require('../../utils');
