@@ -26,10 +26,6 @@ module.exports = {
         unique: true,
         allowNull: false,
       },
-      phone_number: {
-        type: DataTypes.STRING,
-        allowNull: false
-      },
       country: {
         type: DataTypes.STRING,
         allowNull: false

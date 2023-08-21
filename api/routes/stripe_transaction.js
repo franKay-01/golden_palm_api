@@ -66,15 +66,16 @@ router.post('/create-checkout-session', async (req, res) => {
   const rawBody = req.body.toString();
   const parsedBody = JSON.parse(rawBody);
 
+  console.log("ITEMS "+JSON.stringify(parsedBody))
   try {
     const customer = await stripe.customers.create({
       metadata: {
         userId: 1,
-        cart: JSON.stringify(parsedBody.cartItems),
+        cart: JSON.stringify(parsedBody),
       },
     });
 
-    const line_items = parsedBody.cartItems.map((item) => {
+    const line_items = parsedBody.map((item) => {
       return {
         price_data: {
           currency: "usd",
@@ -141,9 +142,12 @@ router.post('/create-checkout-session', async (req, res) => {
           },
         },
       ],
-      // automatic_tax:{
-      //   enabled: true,
-      // },
+      automatic_tax:{
+        enabled: true,
+      },
+      customer_update: {
+        shipping: 'auto'
+      },
       phone_number_collection: {
         enabled: true,
       },

@@ -27,12 +27,13 @@ router.post('/', async (req, res, next) => {
   const rawBody = req.body.toString();
   const parsedBody = JSON.parse(rawBody);
 
-  const {name, description, price, quantity, category_ref_no, img_url} = parsedBody;
+  const {name, description, price, category_ref_no, img_url} = parsedBody;
   try{
-    const productInfo = await Products.create({name, description, price, quantity, category_ref_no, img_url})
+    const productInfo = await Products.create({name, description, price, quantity: 0, category_ref_no, img_url})
     res.status(200).json({
       response_message:"product INFO",
-      response_code: '000'
+      response_code: '000',
+      product_ref_no: productInfo.sku
     })
   }catch(err){
     res.status(err.status || 500)

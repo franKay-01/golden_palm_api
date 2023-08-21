@@ -96,32 +96,29 @@ router.post('/', async (req, res, next) => {
   const rawBody = req.body.toString();
   const parsedBody = JSON.parse(rawBody);
 
-  const {first_name, last_name, email, phone_number, password, role_id, username, country} = parsedBody;
+  const {first_name, last_name, email, password, username, country} = parsedBody;
 
   try{
     const existingUser = await Users.findOne({ where: { username } });
 
     if (existingUser) {
-      return res.status(400).json({ error: {message: 'Username already exists' }});
+      return res.status(200).json({ response_code: 203, error: {message: 'Username already exists' }});
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const user = await Users.create({first_name, last_name, email, phone_number, password: hashedPassword, username, country, role_id})
-
-    // const token = jwt.sign({ id: user.id, username: user.username }, jwtSecret, {
-    //   expiresIn: '1h',
-    // });
+    const user = await Users.create({first_name, last_name, email, password: hashedPassword, username, country, role_id: 2})
 
     res.status(200).json({
+      response_code: 200,
       message:"user INFO",
       username: user.username,
-      // reference_no: user.reference_no,
-      // token
     })
   }catch(err){
-    res.status(err.status || 500)
+    console.log("ERROR " + JSON.stringify(err.message))
+    res.status(200)
     res.json({
+      response_code: 203,
       error: {
         message: err.message
       }

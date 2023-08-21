@@ -56,14 +56,6 @@ module.exports = (sequelize, DataTypes) => {
         isEmail: {msg: "Email format is in-correct"}
       }
     },
-    phone_number: {
-      type: DataTypes.STRING,
-      allowNull: false,
-      validate: {
-        notNull: {msg: "Phone number is a required field"},
-        notEmpty: {msg: "Phone number is a required field"}
-      }
-    },
     country: {
       type: DataTypes.STRING,
       allowNull: false,
