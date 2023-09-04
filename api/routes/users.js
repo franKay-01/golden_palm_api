@@ -59,15 +59,16 @@ router.post('/signin', async (req, res, next) => {
     const user = await Users.findOne({ where: { username } });
 
     if (!user) {
-      return res.status(401).json({ 
-        error: { message: 'Invalid username or password' } 
+      return res.status(200).json({ 
+        response_code: 201,
+        error: { message: 'User details does not exist. Kindly sign up' } 
       });
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
     if (!isPasswordValid) {
-      return res.status(401).json({ 
+      return res.status(200).json({ 
         error: { message: 'Invalid username or password'} 
       });
     }
@@ -77,7 +78,7 @@ router.post('/signin', async (req, res, next) => {
     });
 
     res.status(200).json({    
-      response_code: '000',   
+      response_code: 200,   
       username: user.username,
       token 
     });
