@@ -30,11 +30,32 @@ router.get('/', async (req, res, next) => {
   }
 })
 
+router.get('/customer', authenticateJWT, async (req, res, next) => {
+  try{
+    const orders = await Orders.findOne({
+      where: { user_reference_no: req.user.id },
+    })
+
+    return res.json({
+      response_code: 200,   
+      orders
+    })
+    
+  }catch(err){
+    res.status(err.status || 500)
+    res.json({
+      error: {
+        message: err.message
+      }
+    })
+  }
+
+})
+
 router.post('/', authenticateJWT,  async (req, res, next) => {
   // const {product_reference_no, shipping_address_reference_no, user_reference_no, quantity, amount, other_info, username} = req.body;
   const { order_items, order } = req.body
   try{
-    
     // const product_reference_no_json = { ...product_reference_no }
     const user_reference_no = req.user
     const order_custom_id = user_reference_no.concat(formattedDate)

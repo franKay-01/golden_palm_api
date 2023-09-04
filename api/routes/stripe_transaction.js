@@ -61,12 +61,11 @@ router.get('/:reference_no', async (req, res, next) => {
 })
 
 
-router.post('/create-checkout-session', async (req, res) => {
+router.post('/create-checkout-session', authenticateJWT, async (req, res) => {
   
   const rawBody = req.body.toString();
   const parsedBody = JSON.parse(rawBody);
 
-  console.log("ITEMS "+JSON.stringify(parsedBody))
   try {
     const customer = await stripe.customers.create({
       metadata: {

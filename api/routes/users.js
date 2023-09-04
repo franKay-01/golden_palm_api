@@ -73,7 +73,7 @@ router.post('/signin', async (req, res, next) => {
       });
     }
 
-    const token = jwt.sign({ id: user.reference_no, username: user.username }, jwtSecret, {
+    const token = jwt.sign({ id: user.reference_no, username: user.username }, process.env.TOKEN_KEY, {
       expiresIn: '1h',
     });
 
