@@ -67,13 +67,15 @@ app.use((req, res, next) => {
   next(error);
 })
 
-app.use((error, req, res, next) => {
-  res.status(error.status || 500)
-  res.json({
-      error: {
-          message: error.message
-      }
-  })
-})
+// app.use((error, req, res, next) => {
+//   console.log("HERE 1 " + JSON.stringify(error))
+//   res.status(error.status || 500)
+//   res.json({
+//     response_code: 401,
+//     error: {
+//         message: error.message
+//     }
+//   })
+// })
 
 module.exports = app;

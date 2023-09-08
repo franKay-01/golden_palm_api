@@ -2,11 +2,10 @@ const express = require('express');
 const router = express.Router();
 require('dotenv').config();
 
-const { StripeTransactionInfo, Orders } = require('../../models');
+const { StripeTransactionInfo, Orders, OrderItems } = require('../../models');
 const stripe = require('stripe')(process.env.STRIPE_KEY);
 const authenticateJWT = require('../../middleware/authenticate')
-const { Worker } = require('worker_threads');
-const { formattedDate } = require('../../utils');
+const formattedDate = require('../../utils');
 
 router.get('/', async (req, res, next) => {
   try{
@@ -65,11 +64,10 @@ router.post('/create-checkout-session', authenticateJWT, async (req, res) => {
   
   const rawBody = req.body.toString();
   const parsedBody = JSON.parse(rawBody);
-
   try {
     const customer = await stripe.customers.create({
       metadata: {
-        userId: 1,
+        userId: req.user.id,
         cart: JSON.stringify(parsedBody),
       },
     });
@@ -157,37 +155,16 @@ router.post('/create-checkout-session', authenticateJWT, async (req, res) => {
       cancel_url: `http://localhost:3000/cart`,
     });
   
-    res.send({ resp_code: 200, url: session.url });
+    res.send({ response_code: 200, url: session.url });
   }catch(err){
-    console.log(err)
-    res.send({ resp_code: 400, url: '' });
+    console.log("ERROR "+err)
+    res.send({ response_code: 400, url: '' });
   }
- 
 });
 
 
 const createOrder = async (customer, data) => {
   const Items = JSON.parse(customer.metadata.cart);
-
-  // const products = Items.map((item) => {
-  //   return {
-  //     productId: item.id,
-  //     quantity: item.cartQuantity,
-  //   };
-  // });
-
-  // const newOrder = new Order({
-  //   userId: customer.metadata.userId,
-  //   customerId: data.customer,
-  //   paymentIntentId: data.payment_intent,
-  //   products,
-  //   subtotal: data.amount_subtotal,
-  //   total: data.amount_total,
-  //   shipping: data.customer_details,
-  //   payment_status: data.payment_status,
-  // });
-
-  console.log("CUSTOMER DETAILS " + JSON.stringify(Items))
 
   const user_reference_no = customer.metadata.userId
   const order_custom_id = user_reference_no.concat(formattedDate)
@@ -196,39 +173,16 @@ const createOrder = async (customer, data) => {
     order_custom_id,
     user_reference_no, 
     quantity: Items.length, 
-    amount: data.amount_subtotal, 
+    amount: data.amount_subtotal/100, 
     other_info: `${data.customer_details.address.city},${data.customer_details.address.line1},${data.customer_details.email},${data.customer_details.phone}`
   })
   
   const order_reference_no = order_info.reference_no
-  const webhook_event_id = order_reference_no.concat("-", amount);
 
   for (const order_item of Items) {
-    const { product_reference_no, desc, unit_amount } = order_item;
-    await new Promise((resolve, reject) => {
-      const worker = new Worker('./jobs/createOrder.js', {
-        workerData: {
-          order_reference_no,
-          product_reference_no,
-          webhook_event_id,
-          quantity,
-          unit_amount,
-          desc
-        },
-      });
-      
-      worker.on('message', (message) => {
-        console.log('Worker task completed:', message);
-        resolve();
-      });
-      
-      worker.on('error', (error) => {
-        console.error('Worker task encountered an error:', error);
-        reject(error);
-      });
-    });
+    const { product_id, quantity, unit_amount } = order_item;
+    await OrderItems.create({ order_reference_no, product_reference_no: product_id, quantity, unit_amount })
   }
- 
 };
 // This is your Stripe CLI webhook secret for testing your endpoint locally.
 
@@ -265,7 +219,7 @@ router.post('/webhook', express.json({ type: "application/json" }), (request, re
   }
 
   // Return a 200 response to acknowledge receipt of the event
-  res.status(200).end();
+  response.status(200).end();
 });
 
 

@@ -10,7 +10,7 @@ const stripe = require('stripe')('sk_test_51NSUKABozIprrApfjBLBfdYzgdfxtML7IrPlv
 const router = express.Router();
 router.use(express.raw({ type: '*/*' }));
 
-const { Orders } = require('../../models');
+const { Orders, OrderItems } = require('../../models');
 const { formattedDate } = require('../../utils');
 const authenticateJWT = require('../../middleware/authenticate')
 
@@ -18,6 +18,7 @@ router.get('/', async (req, res, next) => {
   try{
     const orders = await Orders.findAll({include: ['users', 'shipping']})
     return res.json({
+      response_code: 200,
       orders
     })
   }catch(err){
@@ -34,13 +35,14 @@ router.get('/customer', authenticateJWT, async (req, res, next) => {
   try{
     const orders = await Orders.findOne({
       where: { user_reference_no: req.user.id },
+      include: ['orderItems']
     })
 
     return res.json({
       response_code: 200,   
       orders
     })
-    
+
   }catch(err){
     res.status(err.status || 500)
     res.json({
@@ -67,27 +69,30 @@ router.post('/', authenticateJWT,  async (req, res, next) => {
 
     for (const order_item of order_items) {
       const { product_reference_no, quantity, unit_amount } = order_item;
-      await new Promise((resolve, reject) => {
-        const worker = new Worker('./jobs/createOrder.js', {
-          workerData: {
-            order_reference_no,
-            product_reference_no,
-            webhook_event_id,
-            quantity,
-            unit_amount
-          },
-        });
+
+      await OrderItems.create({ order_reference_no, product_reference_no, quantity, unit_amount })
+
+      // await new Promise((resolve, reject) => {
+      //   const worker = new Worker('./jobs/createOrder.js', {
+      //     workerData: {
+      //       order_reference_no,
+      //       product_reference_no,
+      //       webhook_event_id,
+      //       quantity,
+      //       unit_amount
+      //     },
+      //   });
         
-        worker.on('message', (message) => {
-          console.log('Worker task completed:', message);
-          resolve();
-        });
+      //   worker.on('message', (message) => {
+      //     console.log('Worker task completed:', message);
+      //     resolve();
+      //   });
         
-        worker.on('error', (error) => {
-          console.error('Worker task encountered an error:', error);
-          reject(error);
-        });
-      });
+      //   worker.on('error', (error) => {
+      //     console.error('Worker task encountered an error:', error);
+      //     reject(error);
+      //   });
+      // });
     }
     
     res.status(200).json({

@@ -5,7 +5,7 @@ const uuidv4__ = () => {
   );
 }
 
-const formattedDate = () => {
+function formattedDate() {
   const today = new Date();
   const day = String(today.getDate()).padStart(2, '0');
   const month = String(today.getMonth() + 1).padStart(2, '0'); // Months are zero-based
@@ -16,5 +16,5 @@ const formattedDate = () => {
   return formattedDate
 }
 
-module.exports = { formattedDate }
+module.exports =  formattedDate 
 module.exports = { uuidv4__ }

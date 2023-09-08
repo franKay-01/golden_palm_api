@@ -8,10 +8,11 @@ router.get('/', async (req, res, next) => {
       where: {is_active: true}
     })
     
-    return res.json({
-      response_code: '000',
+    return res.status(200).json({
+      response_code: 200,
       products
     })
+    
   }catch(err){
     console.log(JSON.stringify(err))
     res.status(err.status || 500)
