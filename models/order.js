@@ -8,7 +8,7 @@ module.exports = (sequelize, DataTypes) => {
     static associate({Users, StripeTransactionInfo, OrderItems}) {
       this.belongsTo(Users, {foreignKey: 'user_reference_no', targetKey: 'reference_no', as: 'users'})
       this.hasOne(StripeTransactionInfo, {foreignKey: 'order_reference_no' , as: 'stripeTransaction'})
-      this.hasMany(OrderItems, {foreignKey: 'order_reference_no' , as: 'orders'})
+      this.hasMany(OrderItems, {foreignKey: 'order_reference_no' , as: 'orderItems'})
     }
 
     toJSON(){

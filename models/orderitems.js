@@ -4,8 +4,9 @@ const {
 } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
   class OrderItems extends Model {
-    static associate({Orders}) {
-      this.belongsTo(Orders, {foreignKey: 'order_reference_no', targetKey: 'reference_no', as: 'orders'})
+    static associate({Orders, Products}) {
+      this.belongsTo(Orders, {foreignKey: 'order_reference_no', targetKey: 'reference_no', as: 'orders'}),
+      this.belongsTo(Products, {foreignKey: 'product_reference_no', targetKey: 'sku', as: 'products'})
     }
 
     toJSON(){

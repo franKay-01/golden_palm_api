@@ -10,7 +10,7 @@ const stripe = require('stripe')('sk_test_51NSUKABozIprrApfjBLBfdYzgdfxtML7IrPlv
 const router = express.Router();
 router.use(express.raw({ type: '*/*' }));
 
-const { Orders, OrderItems } = require('../../models');
+const { Orders, OrderItems, Products } = require('../../models');
 const { formattedDate } = require('../../utils');
 const authenticateJWT = require('../../middleware/authenticate')
 
@@ -33,9 +33,21 @@ router.get('/', async (req, res, next) => {
 
 router.get('/customer', authenticateJWT, async (req, res, next) => {
   try{
-    const orders = await Orders.findOne({
+    const orders = await Orders.findAll({
       where: { user_reference_no: req.user.id },
-      include: ['orderItems']
+      // include: ['orderItems', include: ['products']],
+      include: [
+        {
+          model: OrderItems, // Use the model name, not 'orderItems'
+          as: 'orderItems', // This should match the alias you defined in the association
+          include: [
+            {
+              model: Products, // Use the model name, not 'products'
+              as: 'products', // This should match the alias you defined in the association
+            },
+          ],
+        },
+      ],
     })
 
     return res.json({

@@ -13,7 +13,7 @@ function formattedDate() {
 
   const formattedDate = day + month + year;
 
-  return formattedDate
+  return formattedDate.toString()
 }
 
 module.exports =  formattedDate 

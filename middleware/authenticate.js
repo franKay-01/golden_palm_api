@@ -2,7 +2,6 @@ const jwt = require('jsonwebtoken');
 
 function authenticateJWT(req, res, next) {
   const token = req.headers.authorization?.split(' ')[1];
-  console.log("TOKEN " + token)
   if (!token) {
     return res.status(200).json({ response_code: 300, error: 'Unauthorized' });
   }
