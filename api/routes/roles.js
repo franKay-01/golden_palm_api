@@ -2,68 +2,60 @@ const express = require('express');
 const router = express.Router();
 const { Roles } = require('../../models');
 
-router.get('/', async (req, res, next) => {
-  try{
-    const roles = await Roles.findAll()
-    return res.json({
-      roles
-    })
-  }catch(err){
-    res.status(err.status || 500).json({
-      error: {
-        message: err.message
-      }
-    })
-  }
-})
+// Error handling middleware
+const errorHandler = (err, res) => {
+  console.error(err);
+  const status = err.status || 500;
+  res.status(status).json({ error: { message: err.message } });
+};
 
-router.post('/', async (req, res, next) => {
+router.use(express.json());
+
+router.get('/', async (req, res) => {
+  try {
+    const roles = await Roles.findAll();
+    res.json({ roles });
+  } catch (err) {
+    errorHandler(err, res);
+  }
+});
+
+router.post('/', async (req, res) => {
   const { role_name } = req.body;
-  try{
-
-    const role = await Roles.create({role_name})
-    res.status(200).json({
-      message:"category INFO",
+  try {
+    const role = await Roles.create({ role_name });
+    res.status(201).json({
+      message: 'Role created',
       role
-    })
-  }catch(err){
-    res.status(err.status || 500).json({
-      error: {
-        message: err.message
-      }
-    })
+    });
+  } catch (err) {
+    errorHandler(err, res);
   }
-})
+});
 
-router.get('/:reference_no', async (req, res, next) => {
+router.get('/:reference_no', async (req, res) => {
   const reference_no = req.params.reference_no;
-  try{
+  try {
     const role = await Roles.findOne({
       where: { reference_no }
-    })
+    });
 
-    return res.json({
-      role
-    })
-  }catch(err){
-    res.status(err.status || 500).json({
-      error: {
-        message: err.message
-      }
-    })
+    if (!role) {
+      res.status(404).json({ message: 'Role not found' });
+    } else {
+      res.json({ role });
+    }
+  } catch (err) {
+    errorHandler(err, res);
   }
-})
+});
 
-router.patch('/:id', (req, res, next) => {
-  res.status(200).json({
-    message: `Updated user record`
-  })
-})
+router.patch('/:id', (req, res) => {
+  res.status(204).end(); // 204 No Content for successful updates
+});
 
-router.delete('/:id', (req, res, next) => {
-  res.status(200).json({
-    message: `Updated user record`
-  })
-})
+router.delete('/:id', (req, res) => {
+  res.status(204).end(); // 204 No Content for successful deletions
+});
 
 module.exports = router;

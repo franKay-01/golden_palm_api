@@ -7,13 +7,13 @@ const uuidv4__ = () => {
 
 function formattedDate() {
   const today = new Date();
-  const day = String(today.getDate()).padStart(2, '0');
-  const month = String(today.getMonth() + 1).padStart(2, '0'); // Months are zero-based
-  const year = String(today.getFullYear());
+  const day = today.getDate().toString().padStart(2, '0');
+  const month = (today.getMonth() + 1).toString().padStart(2, '0'); // Months are zero-based
+  const year = today.getFullYear().toString();
 
   const formattedDate = day + month + year;
 
-  return formattedDate.toString()
+  return formattedDate;
 }
 
 module.exports =  formattedDate 

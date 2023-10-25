@@ -2,6 +2,15 @@ const express = require('express');
 const router = express.Router();
 const { OrderPaymentInfo } = require('../../models');
 
+
+// Error handling middleware
+const errorHandler = (err, res) => {
+  console.error(err);
+  const status = err.status || 500;
+  res.status(status).json({ error: { message: err.message } });
+};
+
+
 router.get('/', async (req, res, next) => {
   try{
     const roles = await OrderPaymentInfo.findAll()
@@ -9,11 +18,7 @@ router.get('/', async (req, res, next) => {
       roles
     })
   }catch(err){
-    res.status(err.status || 500).json({
-      error: {
-        message: err.message
-      }
-    })
+    errorHandler(err, res);
   }
 })
 
@@ -27,11 +32,7 @@ router.post('/', async (req, res, next) => {
       order_payment_info
     })
   }catch(err){
-    res.status(err.status || 500).json({
-      error: {
-        message: err.message
-      }
-    })
+    errorHandler(err, res);
   }
 })
 
@@ -46,11 +47,7 @@ router.get('/:reference_no', async (req, res, next) => {
       role
     })
   }catch(err){
-    res.status(err.status || 500).json({
-      error: {
-        message: err.message
-      }
-    })
+    errorHandler(err, res);
   }
 })
 
