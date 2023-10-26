@@ -27,7 +27,9 @@ router.get('/', authenticateJWT, async (req, res) => {
 });
 
 router.post('/', async (req, res) => {
-  const { category_name } = req.body;
+  const rawBody = req.body.toString();
+  const parsedBody = JSON.parse(rawBody);
+  const { category_name } = parsedBody;
   try {
     await Categories.create({ name: category_name });
     res.status(201).json({
