@@ -1,11 +1,92 @@
 const express = require('express');
+const geolib = require('geolib');
+const zipcode = require('zipcodes');
+
 const router = express.Router();
 require('dotenv').config();
 
 const { StripeTransactionInfo, Orders, OrderItems } = require('../../models');
 const stripe = require('stripe')(process.env.STRIPE_KEY);
 const authenticateJWT = require('../../middleware/authenticate')
-const formattedDate = require('../../utils');
+const { formattedDate } = require('../../utils');
+
+const percentageChange = 0.045;
+const OriginalZipCode = '85001';
+
+function getCoordinatesForZIP(zipCode) {
+  const location = zipcode.lookup(zipCode);
+  if (location) {
+    return { latitude: location.latitude, longitude: location.longitude };
+  } else {
+    console.log("LOCATION FAILED")
+    return res.status(200).json({ response_code: 301, error: 'Zipcode wrong' });
+  }
+}
+
+function calculatedShippingCost(zipCode1, zipCode2, weight = 4) {
+  const distance = calculateDistance(zipCode1, zipCode2);
+
+  if (distance !== null) {
+    console.log(`The distance between ${zipCode1} and ${zipCode2} is approximately ${distance.toFixed(2)} miles.`);
+    const calculatedDistance = distance.toFixed(2)
+    let startingCost = 8.0; // Default starting cost
+    let actualCost = 0.0
+    // Adjust the starting cost based on the weight of the package
+
+    if (weight >= 1 && weight <= 3) {
+      startingCost += 0.75; // Add $2 for packages weighing 1-3 pounds
+    } else if (weight > 3 && weight <= 5) {
+      startingCost += 1.75; // Add $5 for packages weighing 4-5 pounds
+    } else if (weight > 5 && weight <= 7) {
+      startingCost += 2.20; // Add $10 for packages weighing 6-7 pounds
+    }
+  
+    switch (true) {
+      case (calculatedDistance >= 0 && calculatedDistance <= 50):
+        return startingCost;
+      case (calculatedDistance >= 51 && calculatedDistance <= 150):
+        actualCost = startingCost + (startingCost * percentageChange);
+        return actualCost;
+      case (calculatedDistance >= 151 && calculatedDistance <= 300):
+        actualCost = startingCost + (startingCost * percentageChange * 3);
+        return actualCost;
+      case (calculatedDistance >= 301 && calculatedDistance <= 600):
+        actualCost = startingCost + (startingCost * percentageChange * 4);
+        return actualCost;
+      case (calculatedDistance >= 601 && calculatedDistance <= 1000):
+        actualCost = startingCost + (startingCost * percentageChange * 5);
+        return actualCost;
+      case (calculatedDistance >= 1001 && calculatedDistance <= 1400):
+        actualCost = startingCost + (startingCost * percentageChange * 6);
+        return actualCost;
+      case (calculatedDistance >= 1401 && calculatedDistance <= 1800):
+        actualCost = startingCost + (startingCost * percentageChange * 7);
+        return actualCost;
+      case (calculatedDistance > 1801):
+        actualCost = startingCost + (startingCost * percentageChange * 8);
+        return actualCost;
+      default:
+        return startingCost;
+    }
+    
+  } else {
+    console.log('One or both ZIP codes could not be found.');
+    return ("Not Found")
+  }
+}
+
+function calculateDistance(zipCode1, zipCode2) {
+  const coordinates1 = getCoordinatesForZIP(zipCode1);
+  const coordinates2 = getCoordinatesForZIP(zipCode2);
+
+  if (coordinates1 && coordinates2) {
+    const distanceMeters = geolib.getDistance(coordinates1, coordinates2);
+    const distanceMiles = distanceMeters / 1609.344; // 1 mile is approximately 1609.344 meters
+    return distanceMiles;
+  } else {
+    return null; // One or both ZIP codes could not be found
+  }
+}
 
 router.get('/', async (req, res, next) => {
   try{
@@ -59,26 +140,25 @@ router.get('/:reference_no', async (req, res, next) => {
   }
 })
 
-
 router.post('/create-checkout-session', authenticateJWT, async (req, res) => {
   
   const rawBody = req.body.toString();
   const parsedBody = JSON.parse(rawBody);
+
   try {
     const customer = await stripe.customers.create({
       metadata: {
         userId: req.user.id,
-        cart: JSON.stringify(parsedBody),
+        cart: JSON.stringify(parsedBody.cart),
       },
     });
 
-    const line_items = parsedBody.map((item) => {
+    const line_items = parsedBody.cart.map((item) => {
       return {
         price_data: {
           currency: "usd",
           product_data: {
             name: item.name,
-            // images: [item.image],
             description: item.desc,
             metadata: {
               id: item.reference_no,
@@ -90,6 +170,8 @@ router.post('/create-checkout-session', authenticateJWT, async (req, res) => {
       };
     });
 
+    const shippingCost = calculatedShippingCost(OriginalZipCode, parsedBody.zipcode)
+
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       shipping_address_collection: {
@@ -100,10 +182,10 @@ router.post('/create-checkout-session', authenticateJWT, async (req, res) => {
           shipping_rate_data: {
             type: "fixed_amount",
             fixed_amount: {
-              amount: 0,
+              amount: Math.round(shippingCost) * 100,
               currency: "usd",
             },
-            display_name: "Free shipping",
+            display_name: "Shipping",
             // Delivers between 5-7 business days
             delivery_estimate: {
               minimum: {
@@ -116,28 +198,7 @@ router.post('/create-checkout-session', authenticateJWT, async (req, res) => {
               },
             },
           },
-        },
-        {
-          shipping_rate_data: {
-            type: "fixed_amount",
-            fixed_amount: {
-              amount: 1500,
-              currency: "usd",
-            },
-            display_name: "Next day air",
-            // Delivers in exactly 1 business day
-            delivery_estimate: {
-              minimum: {
-                unit: "business_day",
-                value: 1,
-              },
-              maximum: {
-                unit: "business_day",
-                value: 3,
-              },
-            },
-          },
-        },
+        }
       ],
       automatic_tax:{
         enabled: true,
@@ -157,7 +218,6 @@ router.post('/create-checkout-session', authenticateJWT, async (req, res) => {
   
     res.send({ response_code: 200, url: session.url });
   }catch(err){
-    console.log("ERROR "+err)
     res.send({ response_code: 400, url: '' });
   }
 });

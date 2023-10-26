@@ -13,6 +13,7 @@ const orderRoutes = require("./api/routes/order")
 const stripe = require("./api/routes/stripe_transaction")
 const common = require("./api/routes/common")
 
+
 const cors = require('cors');
 // Array of allowed country codes
 const allowedCountries = ['US', 'CA', 'GH']; // Add more country codes as needed
