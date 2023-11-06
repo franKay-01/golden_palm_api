@@ -5,14 +5,30 @@ const zipcode = require('zipcodes');
 const router = express.Router();
 require('dotenv').config();
 
-const { StripeTransactionInfo, Orders, OrderItems } = require('../../models');
+const { StripeTransactionInfo, Orders, OrderItems, ShippingItemPrice } = require('../../models');
 const stripe = require('stripe')(process.env.STRIPE_KEY);
 const authenticateJWT = require('../../middleware/authenticate')
-const { formattedDate } = require('../../utils');
+const utils = require('../../utils').default;
 
-const percentageChange = 0.045;
+let percentageChange = 0;
 const OriginalZipCode = '85001';
 
+async function getShippingPrice() {
+  console.log("HERE SH")
+  try{
+    const shippingRates = await ShippingItemPrice.findOne({
+      order: [ [ 'createdAt', 'DESC' ]]
+    })
+    
+    return shippingRates;
+    
+  }catch (err){
+    console.log("HERE ERR " + JSON.stringify(err))
+    errorHandler(err, res);
+  }
+}
+
+ 
 function getCoordinatesForZIP(zipCode) {
   const location = zipcode.lookup(zipCode);
   if (location) {
@@ -23,13 +39,15 @@ function getCoordinatesForZIP(zipCode) {
   }
 }
 
-function calculatedShippingCost(zipCode1, zipCode2, weight = 4) {
+async function calculatedShippingCost(zipCode1, zipCode2, weight = 4) {
   const distance = calculateDistance(zipCode1, zipCode2);
+  const startingCostDetails = await getShippingPrice()
+
+  percentageChange = (parseFloat(startingCostDetails.percentage)/100)
 
   if (distance !== null) {
-    console.log(`The distance between ${zipCode1} and ${zipCode2} is approximately ${distance.toFixed(2)} miles.`);
     const calculatedDistance = distance.toFixed(2)
-    let startingCost = 8.0; // Default starting cost
+    let startingCost = parseFloat(startingCostDetails.price); // Default starting cost
     let actualCost = 0.0
     // Adjust the starting cost based on the weight of the package
 
@@ -145,6 +163,7 @@ router.post('/create-checkout-session', authenticateJWT, async (req, res) => {
   const rawBody = req.body.toString();
   const parsedBody = JSON.parse(rawBody);
 
+  console.log("PARSED "+JSON.stringify(parsedBody))
   try {
     const customer = await stripe.customers.create({
       metadata: {
@@ -164,14 +183,19 @@ router.post('/create-checkout-session', authenticateJWT, async (req, res) => {
               id: item.reference_no,
             },
           },
-          unit_amount: item.price * 100,
+          unit_amount: item.unit_price * 100,
         },
         quantity: item.quantity,
       };
     });
 
-    const shippingCost = calculatedShippingCost(OriginalZipCode, parsedBody.zipcode)
+    let total = 0;
+    for (const item of parsedBody.cart) {
+      total += parseInt(item.quantity, 10);
+    }
 
+    const shippingCost = await calculatedShippingCost(OriginalZipCode, parsedBody.zipcode, ((total * 9)/ 16))
+    
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       shipping_address_collection: {
@@ -222,12 +246,11 @@ router.post('/create-checkout-session', authenticateJWT, async (req, res) => {
   }
 });
 
-
 const createOrder = async (customer, data) => {
   const Items = JSON.parse(customer.metadata.cart);
 
   const user_reference_no = customer.metadata.userId
-  const order_custom_id = user_reference_no.concat(formattedDate)
+  const order_custom_id = user_reference_no + '-' + utils.dateFormat()
 
   const order_info = await Orders.create({
     order_custom_id,

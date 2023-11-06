@@ -11,7 +11,7 @@ const router = express.Router();
 router.use(express.raw({ type: '*/*' }));
 
 const { Orders, OrderItems, Products } = require('../../models');
-const { formattedDate } = require('../../utils');
+const utils = require('../../utils').default;
 const authenticateJWT = require('../../middleware/authenticate')
 
 router.get('/', async (req, res, next) => {
@@ -72,7 +72,7 @@ router.post('/', authenticateJWT,  async (req, res, next) => {
   try{
     // const product_reference_no_json = { ...product_reference_no }
     const user_reference_no = req.user
-    const order_custom_id = user_reference_no.concat(formattedDate)
+    const order_custom_id = user_reference_no.concat(utils.dateFormat())
 
     const order_info = await Orders.create({order_custom_id, user_reference_no , quantity: order.quantity, amount: order.amount, other_info: order.other_info})
     
