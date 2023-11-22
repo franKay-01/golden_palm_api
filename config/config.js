@@ -1,8 +1,8 @@
 const config = {
   development: {
-    username: process.env.DB_DEVELOPMENT_USER,
-    password: process.env.DB_DEVELOPMENT_PASSWORD,
-    database: process.env.DB_DEVELOPMENT_NAME,
+    username: "golden_palm_user",
+    password: null,
+    database: "golden_palm_db",
     host: "localhost",
     dialect: "postgres",
   },

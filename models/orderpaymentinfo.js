@@ -5,9 +5,8 @@ const {
 module.exports = (sequelize, DataTypes) => {
 
   class OrderPaymentInfo extends Model {
-    static associate({Orders, StripeTransactionInfo}) {
+    static associate({Orders}) {
       this.belongsTo(Orders, {foreignKey: 'order_reference_no', targetKey: 'reference_no', as: 'orders'})
-      // this.belongsTo(StripeTransactionInfo, {foreignKey: 'order_payment_info_reference_no', targetKey: 'payment_info_reference_no', as: 'stripe_transaction'})
     }
 
     toJSON(){

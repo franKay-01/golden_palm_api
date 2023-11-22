@@ -7,14 +7,14 @@ require('dotenv').config();
 
 const { StripeTransactionInfo, Orders, OrderItems, ShippingItemPrice } = require('../../models');
 const stripe = require('stripe')(process.env.STRIPE_KEY);
-const authenticateJWT = require('../../middleware/authenticate')
+const authenticateJWT = require('../../middleware/authenticate');
+const { sendSalesEmail } = require('../../utils');
 const utils = require('../../utils').default;
 
 let percentageChange = 0;
 const OriginalZipCode = '85001';
 
 async function getShippingPrice() {
-  console.log("HERE SH")
   try{
     const shippingRates = await ShippingItemPrice.findOne({
       order: [ [ 'createdAt', 'DESC' ]]
@@ -252,22 +252,27 @@ const createOrder = async (customer, data) => {
   const user_reference_no = customer.metadata.userId
   const order_custom_id = user_reference_no + '-' + utils.dateFormat()
 
-  const order_info = await Orders.create({
-    order_custom_id,
-    user_reference_no, 
-    quantity: Items.length, 
-    amount: data.amount_subtotal/100, 
-    other_info: `${data.customer_details.address.city},${data.customer_details.address.line1},${data.customer_details.email},${data.customer_details.phone}`
-  })
-  
-  const order_reference_no = order_info.reference_no
+  try {
+    const order_info = await Orders.create({
+      order_custom_id,
+      user_reference_no, 
+      quantity: Items.length, 
+      amount: data.amount_subtotal/100, 
+      other_info: `${data.customer_details.address.city},${data.customer_details.address.line1},${data.customer_details.email},${data.customer_details.phone}`
+    })
+    
+    const order_reference_no = order_info.reference_no
 
-  for (const order_item of Items) {
-    const { product_id, quantity, unit_amount } = order_item;
-    await OrderItems.create({ order_reference_no, product_reference_no: product_id, quantity, unit_amount })
+    for (const order_item of Items) {
+      const { product_id, quantity, unit_amount } = order_item;
+      await OrderItems.create({ order_reference_no, product_reference_no: product_id, quantity, unit_amount })
+    }
+
+    return order_reference_no
+  }catch(err){
+    return false
   }
 };
-// This is your Stripe CLI webhook secret for testing your endpoint locally.
 
 router.post('/webhook', express.json({ type: "application/json" }), (request, response) => {
   const sig = request.headers['stripe-signature'];
@@ -280,16 +285,16 @@ router.post('/webhook', express.json({ type: "application/json" }), (request, re
     response.status(400).send(`Webhook Error: ${err.message}`);
     return;
   }
-  // Handle the event
+  
   switch (event.type) {
     case 'checkout.session.completed':
       const data = event.data.object;
       stripe.customers
         .retrieve(data.customer)
         .then(async (customer) => {
-          try {
-            // CREATE ORDER
-            createOrder(customer, data);
+          try {           
+            const order_id = await createOrder(customer, data);
+            sendSalesEmail(data.customer_details.email, order_id)
           } catch (err) {
             console.log(typeof createOrder);
             console.log(err);
@@ -301,7 +306,6 @@ router.post('/webhook', express.json({ type: "application/json" }), (request, re
       console.log(`Unhandled event type ${event.type}`);
   }
 
-  // Return a 200 response to acknowledge receipt of the event
   response.status(200).end();
 });
 

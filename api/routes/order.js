@@ -35,7 +35,6 @@ router.get('/customer', authenticateJWT, async (req, res, next) => {
   try{
     const orders = await Orders.findAll({
       where: { user_reference_no: req.user.id },
-      // include: ['orderItems', include: ['products']],
       include: [
         {
           model: OrderItems, // Use the model name, not 'orderItems'
@@ -122,23 +121,27 @@ router.post('/', authenticateJWT,  async (req, res, next) => {
 
 router.get('/:reference_no', async (req, res, next) => {
   const {reference_no} = req.params;
-  try{
-    const order = await Orders.findOne({
-      where: { reference_no },
-      // include: ['users']
-    })
 
-    return res.json({
-      order
-    })
-  }catch(err){
-    res.status(err.status || 500)
-    res.json({
-      error: {
-        message: err.message
-      }
-    })
-  }
+  const orders = await Orders.findOne({
+    where: { reference_no },
+    include: [
+      {
+        model: OrderItems, // Use the model name, not 'orderItems'
+        as: 'orderItems', // This should match the alias you defined in the association
+        include: [
+          {
+            model: Products, // Use the model name, not 'products'
+            as: 'products', // This should match the alias you defined in the association
+          },
+        ],
+      },
+    ],
+  })
+
+  return res.json({
+    response_code: 200,   
+    orders
+  })
 })
 
 router.patch('/:id', (req, res, next) => {
