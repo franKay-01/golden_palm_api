@@ -1,11 +1,4 @@
 const express = require('express');
-const crypto = require('crypto');
-const bodyParser = require('body-parser');
-
-// const Queue = require('bull');
-// const queue = new Queue('myQueue');
-const { Worker } = require('worker_threads');
-const stripe = require('stripe')('sk_test_51NSUKABozIprrApfjBLBfdYzgdfxtML7IrPlvivhekTKskRetoGx8y3luTVwQhJjQnsvp7fbruXUoa2eRm5bEzOA00zvB4hLrN');
 
 const router = express.Router();
 router.use(express.raw({ type: '*/*' }));
@@ -82,28 +75,6 @@ router.post('/', authenticateJWT,  async (req, res, next) => {
       const { product_reference_no, quantity, unit_amount } = order_item;
 
       await OrderItems.create({ order_reference_no, product_reference_no, quantity, unit_amount })
-
-      // await new Promise((resolve, reject) => {
-      //   const worker = new Worker('./jobs/createOrder.js', {
-      //     workerData: {
-      //       order_reference_no,
-      //       product_reference_no,
-      //       webhook_event_id,
-      //       quantity,
-      //       unit_amount
-      //     },
-      //   });
-        
-      //   worker.on('message', (message) => {
-      //     console.log('Worker task completed:', message);
-      //     resolve();
-      //   });
-        
-      //   worker.on('error', (error) => {
-      //     console.error('Worker task encountered an error:', error);
-      //     reject(error);
-      //   });
-      // });
     }
     
     res.status(200).json({

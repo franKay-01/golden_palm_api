@@ -14,7 +14,7 @@ const utils = require('../../utils').default;
 let percentageChange = 0;
 const OriginalZipCode = '85001';
 
-async function getShippingPrice() {
+const getShippingPrice = async () => {
   try{
     const shippingRates = await ShippingItemPrice.findOne({
       order: [ [ 'createdAt', 'DESC' ]]
@@ -28,8 +28,7 @@ async function getShippingPrice() {
   }
 }
 
- 
-function getCoordinatesForZIP(zipCode) {
+const getCoordinatesForZIP = (zipCode) => {
   const location = zipcode.lookup(zipCode);
   if (location) {
     return { latitude: location.latitude, longitude: location.longitude };
@@ -39,7 +38,7 @@ function getCoordinatesForZIP(zipCode) {
   }
 }
 
-async function calculatedShippingCost(zipCode1, zipCode2, weight = 4) {
+const calculatedShippingCost = async (zipCode1, zipCode2, weight = 4) => {
   const distance = calculateDistance(zipCode1, zipCode2);
   const startingCostDetails = await getShippingPrice()
 
@@ -93,7 +92,7 @@ async function calculatedShippingCost(zipCode1, zipCode2, weight = 4) {
   }
 }
 
-function calculateDistance(zipCode1, zipCode2) {
+const calculateDistance = (zipCode1, zipCode2) => {
   const coordinates1 = getCoordinatesForZIP(zipCode1);
   const coordinates2 = getCoordinatesForZIP(zipCode2);
 
