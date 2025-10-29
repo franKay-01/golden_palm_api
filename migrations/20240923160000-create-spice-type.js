@@ -2,51 +2,30 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, DataTypes) {
-    await queryInterface.createTable('users', {
+    await queryInterface.createTable('spice_types', {
       id: {
         allowNull: false,
         autoIncrement: true,
         type: DataTypes.INTEGER
       },
-      first_name: {
+      name: {
         type: DataTypes.STRING,
         allowNull: false
       },
-      last_name: {
-        type: DataTypes.STRING,
-        allowNull: false
+      description: {
+        type: DataTypes.TEXT,
+        allowNull: true
       },
-      username: {
-        type: DataTypes.STRING,
-        allowNull: false,
-        unique: true
-      },
-      email: {
-        type: DataTypes.STRING,
-        unique: true,
-        allowNull: false,
-      },
-      country: {
-        type: DataTypes.STRING,
-        allowNull: false
-      },
-      password: {
-        type: DataTypes.STRING,
-        allowNull: false
-      },
-      reference_no: {
+      spice_type_id: {
         type: DataTypes.UUID,
         defaultValue: DataTypes.UUIDV4,
-        unique: true,
         primaryKey: true,
+        unique: true
       },
       is_active: {
         type: DataTypes.BOOLEAN,
+        allowNull: false,
         defaultValue: true
-      },
-      role_id: {
-        type: DataTypes.INTEGER,
-        allowNull: false
       },
       createdAt: {
         allowNull: false,
@@ -59,6 +38,6 @@ module.exports = {
     });
   },
   async down(queryInterface, DataTypes) {
-    await queryInterface.dropTable('users');
+    await queryInterface.dropTable('spice_types');
   }
 };

@@ -12,6 +12,7 @@ module.exports = (sequelize, DataTypes) => {
       return {...this.get(), id: undefined}
     }
   }
+  
   Categories.init({
     name: {
       type: DataTypes.STRING,

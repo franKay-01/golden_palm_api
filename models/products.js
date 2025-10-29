@@ -5,11 +5,7 @@ const {
 module.exports = (sequelize, DataTypes) => {
   class Products extends Model {
     static associate({Categories, OrderItems}) {
-      // this.belongsTo(Categories, {foreignKey: 'category_ref_no', as: 'categories'})
       this.belongsTo(Categories, { foreignKey: 'category_ref_no', targetKey: 'reference_no', as: 'categories' });
-      // this.hasMany(OrderItems, {foreignKey: 'order_reference_no' , as: 'orderItems'})
-
-      // this.hasMany(Orders, {foreignKey: 'product_reference_no' , as: 'orders'})
     }
 
     toJSON(){
@@ -26,7 +22,7 @@ module.exports = (sequelize, DataTypes) => {
       }
     },
     description: {
-      type: DataTypes.STRING,
+      type: DataTypes.TEXT,
       allowNull: false,
       validate: {
         notNull: {msg: "Product description is a required field"},
@@ -36,6 +32,11 @@ module.exports = (sequelize, DataTypes) => {
     sku: {
       type: DataTypes.UUID,
       defaultValue: DataTypes.UUIDV4,
+      unique: true
+    },
+    slug: {
+      type: DataTypes.STRING,
+      allowNull: true,
       unique: true
     },
     category_ref_no: {
@@ -61,6 +62,43 @@ module.exports = (sequelize, DataTypes) => {
     img_url: {
       type: DataTypes.STRING,
       allowNull: true
+    },
+    highlights: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
+    ref_color: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    metadata:{
+      type: DataTypes.JSON,
+      allowNull: true,
+    },
+    uses: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      validate: {
+        isArrayOfStrings(value) {
+          if (value !== null && value !== undefined) {
+            if (!Array.isArray(value)) {
+              throw new Error('Uses must be an array');
+            }
+            if (!value.every(item => typeof item === 'string')) {
+              throw new Error('All uses items must be strings');
+            }
+          }
+        }
+      }
+    },
+    is_hot: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      defaultValue: false
+    },
+    is_discount:{
+      type: DataTypes.BOOLEAN,
+      defaultValue: false
     },
     is_active: {
       type: DataTypes.BOOLEAN,

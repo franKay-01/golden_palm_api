@@ -2,18 +2,46 @@ const express = require('express');
 const schedule = require('node-schedule');
 const Sequelize = require('sequelize');
 const fs = require('fs');
+const multer = require('multer');
+const path = require('path');
+const { authenticateJWT, authenticateAdmin } = require("../../middleware/authenticate");
+const { Users, Orders, Products, Categories, 
+  ShippingItemPrice, SubscriptionEmails, 
+  PasswordToken, ClientContact, Recipes } = require('../../models');
+
+const { sendSalesEmail, sendTokenEmail } = require('../../utils');
 
 const router = express.Router();
 
-const { Users, Orders, Products, Categories, 
-  ShippingItemPrice, SubscriptionEmails, 
-  PasswordToken, ClientContact } = require('../../models');
+// Configure multer for recipe image uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadPath = path.join(__dirname, '../../uploads/recipes');
+    cb(null, uploadPath);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, 'recipe-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
 
-const authenticateJWT = require('../../middleware/authenticate');
-const { sendSalesEmail, sendTokenEmail } = require('../../utils');
+const upload = multer({
+  storage: storage,
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|gif|webp/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+
+    if (mimetype && extname) {
+      return cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed!'));
+    }
+  }
+});
 
 const errorHandler = (err, res) => {
-  console.error(err);
+  console.error('Error occurred:', err);
   const status = err.status || 500;
   res.status(status).json({ error: { message: err.message } });
 };
@@ -50,6 +78,253 @@ const generateRandomString = (length) => {
 
   return randomString;
 }
+
+router.get('/recipe', async (req, res) => {
+  try {
+    const recipe = await Recipes.findOne({ where: {is_active: true }})
+
+    res.json({
+      response_code: '000',
+      recipe
+    });
+  } catch (err) {
+    errorHandler(err, res);
+  }
+})
+
+router.get('/recipes', async (req, res) => {
+  try {
+    const allRecipes = await Recipes.findAll({
+        order: [['createdAt', 'DESC']]
+      })
+
+    if (allRecipes.length === 0) {
+      res.status(201).json({ response_code: '001', error: { message: 'No categories found' } });
+    } else {
+      res.json({ response_code: '000', allRecipes, response_message: "Recipes retrieved successfully" });
+    }
+
+  } catch (err) {
+    errorHandler(err, res);
+  }
+})
+
+router.get('/recipe/:id', async (req, res) => {
+  const recipeId = req.params.id;
+
+  try {
+    const recipe = await Recipes.findOne({
+      where: {id: recipeId}
+    })
+
+    if (!recipe) {
+      return res.status(404).json({
+        response_code: '001',
+        error: { message: 'Recipe not found' }
+      });
+    }
+
+    // Fetch associated products if they exist
+    console.log("recipe ", JSON.stringify(recipe))
+    let products = [];
+    if (recipe.associated_products && recipe.associated_products.length > 0) {
+      products = await Products.findAll({
+        where: {
+          sku: recipe.associated_products
+        },
+        include: [
+          {
+            model: Categories,
+            as: 'categories'
+          }
+        ]
+      });
+    }
+
+    res.json({
+      response_code: '000',
+      recipe,
+      products,
+      response_message: "Recipe retrieved successfully"
+    });
+
+  } catch (err) {
+    errorHandler(err, res);
+  }
+})
+
+router.post('/recipe/:id', authenticateAdmin, async (req, res) => {
+  const recipeId = req.params.id;
+
+  try{
+    const activeRecipe = await Recipes.findOne({
+      where: {is_active: true}
+    })
+
+    if (activeRecipe){
+      activeRecipe.is_active = false
+
+      await activeRecipe.save()
+
+      const newActiveRecipe = await Recipes.findOne({where: {id: recipeId}})
+
+      if (newActiveRecipe){
+        newActiveRecipe.is_active = true;
+        await newActiveRecipe.save()
+
+        res.status(200).json({
+          response_code: '000',
+          response_message: 'Active recipe selected'
+        });
+      }else{
+        res.status(200).json({
+          response_code: '001',
+          response_message: 'Active recipe updated failed'
+        });
+      }
+    }else{
+      const newActiveRecipe = await Recipes.findOne({
+        where: {id: recipeId}
+      })
+
+      if (newActiveRecipe){
+        newActiveRecipe.is_active = true;
+        await newActiveRecipe.save()
+
+        res.status(200).json({
+          response_code: '000',
+          response_message: 'Active recipe selected'
+        });
+      }else{
+        res.status(200).json({
+          response_code: '001',
+          response_message: 'Active recipe updated failed'
+        });
+      }
+    }
+  }catch (err) {
+    errorHandler(err, res);
+  }
+})
+
+router.put('/recipe/:id', authenticateAdmin, upload.single('associated_image'), async (req, res) => {
+  const recipeId = req.params.id;
+
+  try{
+    console.log('Recipe update request received');
+    console.log('Recipe ID:', recipeId);
+    console.log('Body:', req.body);
+    console.log('File:', req.file);
+
+    const recipe = await Recipes.findOne({where: {id: recipeId}});
+
+    if (!recipe) {
+      return res.status(404).json({
+        response_code: "001",
+        response_message: "Recipe not found"
+      });
+    }
+
+    const {title, description, prep_info, preparation, ingredients, associated_products} = req.body;
+
+    // Update fields if provided
+    if (title) recipe.title = title;
+    if (description) recipe.description = description;
+
+    // Handle image update
+    if (req.file) {
+      // Delete old image file if it exists
+      if (recipe.associated_image) {
+        const oldImagePath = path.join(__dirname, '../../', recipe.associated_image);
+        if (fs.existsSync(oldImagePath)) {
+          fs.unlinkSync(oldImagePath);
+        }
+      }
+      recipe.associated_image = `/uploads/recipes/${req.file.filename}`;
+    }
+
+    // Parse and update JSON fields if provided
+    if (prep_info) {
+      recipe.prep_info = typeof prep_info === 'string' ? JSON.parse(prep_info) : prep_info;
+    }
+    if (preparation) {
+      recipe.preparation = typeof preparation === 'string' ? JSON.parse(preparation) : preparation;
+    }
+    if (ingredients) {
+      recipe.ingredients = typeof ingredients === 'string' ? JSON.parse(ingredients) : ingredients;
+    }
+    if (associated_products) {
+      recipe.associated_products = typeof associated_products === 'string' ? JSON.parse(associated_products) : associated_products;
+    }
+
+    await recipe.save();
+
+    res.json({
+      response_code: "000",
+      response_message: "Recipe updated successfully",
+      recipe
+    });
+
+  }catch(err){
+    errorHandler(err, res);
+  }
+})
+
+router.post('/recipe', authenticateAdmin, upload.single('associated_image'), async (req, res) => {
+  try{
+    console.log('Recipe creation request received');
+    console.log('Headers:', req.headers);
+    console.log('Body:', req.body);
+    console.log('File:', req.file);
+    console.log('Files:', req.files);
+
+    const {title, description, prep_info, preparation, ingredients, associated_products} = req.body;
+
+    // Check if file was uploaded
+    if (!req.file) {
+      console.error('No file uploaded');
+      return res.status(400).json({
+        response_code: "001",
+        response_message: "Image file is required"
+      });
+    }
+
+    // Generate the image path/URL
+    const imagePath = `/uploads/recipes/${req.file.filename}`;
+
+    // Parse JSON fields if they're sent as strings
+    const parsedPrepInfo = typeof prep_info === 'string' ? JSON.parse(prep_info) : prep_info;
+    const parsedPreparation = typeof preparation === 'string' ? JSON.parse(preparation) : preparation;
+    const parsedIngredients = typeof ingredients === 'string' ? JSON.parse(ingredients) : ingredients;
+    const parsedAssociatedProducts = associated_products ? (typeof associated_products === 'string' ? JSON.parse(associated_products) : associated_products) : null;
+
+    const recipe_details = await Recipes.create({
+      title,
+      description,
+      associated_image: imagePath,
+      prep_info: parsedPrepInfo,
+      preparation: parsedPreparation,
+      ingredients: parsedIngredients,
+      associated_products: parsedAssociatedProducts
+    })
+
+    if (recipe_details){
+      res.json({
+        response_code: "000",
+        response_message:"Recipe details created successfully",
+        recipe_id: recipe_details.id,
+        image_path: imagePath
+      })
+    }else{
+      res.json({
+        response_code: "001",
+        response_message:"Recipe details creation failed"
+      })
+    }
+  }catch(err){
+    errorHandler(err, res);
+  }
+})
 
 router.post('/contacts', async (req, res) => {
   const rawBody = req.body.toString();
@@ -214,11 +489,16 @@ router.get('/product-info', async (req, res, next) => {
         order: [['createdAt', 'DESC']]
       }),
       Products.findAll({
-        include: ['categories']
+        include: [
+          {
+            model: Categories, // Reference the associated model class here
+            as: 'categories'   // Alias used in the association
+          }
+        ]
       })
     ]);
 
-    res.json({
+    res.status(200).json({
       response_code: '000',
       allCategories,
       allProducts
@@ -245,7 +525,8 @@ router.get('/home-analytics', authenticateJWT, async (req, res, next) => {
     ]);
 
     res.json({
-      response_code: '000',
+      response_code: "000",
+      response_message: "Data retrieved successfully",
       userCount,
       orderCount,
       productCount,

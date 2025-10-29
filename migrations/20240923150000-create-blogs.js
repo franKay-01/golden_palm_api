@@ -2,51 +2,64 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, DataTypes) {
-    await queryInterface.createTable('users', {
+    await queryInterface.createTable('blogs', {
       id: {
         allowNull: false,
         autoIncrement: true,
         type: DataTypes.INTEGER
       },
-      first_name: {
+      title: {
         type: DataTypes.STRING,
         allowNull: false
       },
-      last_name: {
+      content: {
+        type: DataTypes.TEXT,
+        allowNull: false
+      },
+      blog_id: {
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4,
+        primaryKey: true,
+        unique: true
+      },
+      author: {
         type: DataTypes.STRING,
         allowNull: false
       },
-      username: {
+      category: {
+        type: DataTypes.STRING,
+        allowNull: true
+      },
+      tags: {
+        type: DataTypes.JSON,
+        allowNull: true
+      },
+      img_url: {
+        type: DataTypes.STRING,
+        allowNull: true
+      },
+      slug: {
         type: DataTypes.STRING,
         allowNull: false,
         unique: true
       },
-      email: {
+      meta_description: {
         type: DataTypes.STRING,
-        unique: true,
+        allowNull: true
+      },
+      is_published: {
+        type: DataTypes.BOOLEAN,
         allowNull: false,
+        defaultValue: false
       },
-      country: {
-        type: DataTypes.STRING,
-        allowNull: false
-      },
-      password: {
-        type: DataTypes.STRING,
-        allowNull: false
-      },
-      reference_no: {
-        type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV4,
-        unique: true,
-        primaryKey: true,
+      published_at: {
+        type: DataTypes.DATE,
+        allowNull: true
       },
       is_active: {
         type: DataTypes.BOOLEAN,
+        allowNull: false,
         defaultValue: true
-      },
-      role_id: {
-        type: DataTypes.INTEGER,
-        allowNull: false
       },
       createdAt: {
         allowNull: false,
@@ -59,6 +72,6 @@ module.exports = {
     });
   },
   async down(queryInterface, DataTypes) {
-    await queryInterface.dropTable('users');
+    await queryInterface.dropTable('blogs');
   }
 };

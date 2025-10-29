@@ -12,8 +12,26 @@ const shippingRoutes = require("./api/routes/shipping_address")
 const orderRoutes = require("./api/routes/order")
 const stripe = require("./api/routes/stripe_transaction")
 const common = require("./api/routes/common")
+const curatedBundles = require('./api/routes/curated_bundles')
+const reviews = require('./api/routes/reviews')
+const cart = require('./api/routes/cart')
 
 const cors = require('cors');
+
+const allowedOrigins = ['http://localhost:4010', 'http://localhost:8020'];
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (allowedOrigins.includes(origin) || !origin) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true, // Allow credentials
+};
+
+app.use(cors(corsOptions));
 // Array of allowed country codes
 const allowedCountries = ['US', 'CA', 'GH']; // Add more country codes as needed
 
@@ -35,15 +53,36 @@ const allowOnlyAllowedCountries = (req, res, next) => {
 };
 
 // app.use(allowOnlyAllowedCountries)
-app.use(cors());
+
+// app.use(cors({
+//   origin: 'http://localhost:4010', // Allow only this origin
+//   credentials: true, // Allow credentials
+// }));
+
+// app.use(cors({
+//   origin: 'http://localhost:8020', // Allow only this origin
+//   credentials: true, // Allow credentials
+// }));
+
 app.use(morgan('dev'));
-app.use(bodyParser.urlencoded({extended: false}));
-app.use(bodyParser.raw({type: "*/*"}))
+app.use('/uploads', express.static('uploads'));
+
+// Skip body parsing for multipart/form-data (let multer handle it)
+app.use((req, res, next) => {
+  if (req.headers['content-type'] && req.headers['content-type'].includes('multipart/form-data')) {
+    return next();
+  }
+  next();
+});
+
+app.use(bodyParser.json()); // Middleware for reading request body
+app.use(bodyParser.urlencoded({extended: true}));
+// app.use(bodyParser.raw({type: "*/*"}))
 app.use(bodyParser.json())
 app.use('stripe/webhook', bodyParser.raw({type: "*/*"}))
 
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Credentials', 'true');
   res.header('Access-Control-Allow-Header', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
 
   if (req.method === 'OPTIONS'){
@@ -60,6 +99,9 @@ app.use('/shipping', shippingRoutes)
 app.use('/order', orderRoutes)
 app.use('/stripe', stripe)
 app.use('/common', common)
+app.use('/curated-bundles', curatedBundles)
+app.use('/reviews', reviews)
+app.use('/cart', cart)
 
 app.use((req, res, next) => {
   const error = new Error('Not Found');

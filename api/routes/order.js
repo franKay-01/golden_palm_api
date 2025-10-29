@@ -5,7 +5,7 @@ router.use(express.raw({ type: '*/*' }));
 
 const { Orders, OrderItems, Products } = require('../../models');
 const utils = require('../../utils').default;
-const authenticateJWT = require('../../middleware/authenticate')
+const { authenticateJWT } = require('../../middleware/authenticate')
 
 router.get('/', async (req, res, next) => {
   try{

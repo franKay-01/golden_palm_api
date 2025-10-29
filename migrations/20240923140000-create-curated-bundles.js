@@ -2,51 +2,51 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, DataTypes) {
-    await queryInterface.createTable('users', {
+    await queryInterface.createTable('curated_bundles', {
       id: {
         allowNull: false,
         autoIncrement: true,
         type: DataTypes.INTEGER
       },
-      first_name: {
+      name: {
         type: DataTypes.STRING,
         allowNull: false
       },
-      last_name: {
-        type: DataTypes.STRING,
-        allowNull: false
+      description: {
+        type: DataTypes.TEXT,
+        allowNull: true
       },
-      username: {
-        type: DataTypes.STRING,
-        allowNull: false,
-        unique: true
-      },
-      email: {
-        type: DataTypes.STRING,
-        unique: true,
-        allowNull: false,
-      },
-      country: {
-        type: DataTypes.STRING,
-        allowNull: false
-      },
-      password: {
-        type: DataTypes.STRING,
-        allowNull: false
-      },
-      reference_no: {
+      bundle_id: {
         type: DataTypes.UUID,
         defaultValue: DataTypes.UUIDV4,
-        unique: true,
         primaryKey: true,
+        unique: true
+      },
+      img_url: {
+        type: DataTypes.STRING,
+        allowNull: true
+      },
+      price: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: false
+      },
+      discount_percentage: {
+        type: DataTypes.DECIMAL(5, 2),
+        allowNull: true,
+        defaultValue: 0
+      },
+      products: {
+        type: DataTypes.JSON,
+        allowNull: false
+      },
+      bundle_type: {
+        type: DataTypes.STRING,
+        allowNull: true
       },
       is_active: {
         type: DataTypes.BOOLEAN,
+        allowNull: false,
         defaultValue: true
-      },
-      role_id: {
-        type: DataTypes.INTEGER,
-        allowNull: false
       },
       createdAt: {
         allowNull: false,
@@ -59,6 +59,6 @@ module.exports = {
     });
   },
   async down(queryInterface, DataTypes) {
-    await queryInterface.dropTable('users');
+    await queryInterface.dropTable('curated_bundles');
   }
 };

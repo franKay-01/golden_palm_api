@@ -7,7 +7,7 @@ require('dotenv').config();
 
 const { StripeTransactionInfo, Orders, OrderItems, ShippingItemPrice } = require('../../models');
 const stripe = require('stripe')(process.env.STRIPE_KEY);
-const authenticateJWT = require('../../middleware/authenticate');
+const { authenticateJWT } = require("../../middleware/authenticate");
 const { sendSalesEmail } = require('../../utils');
 const utils = require('../../utils').default;
 
@@ -141,12 +141,12 @@ router.post('/', async (req, res, next) => {
 router.get('/:reference_no', async (req, res, next) => {
   const {order_payment_info} = req.params;
   try{
-    const role = await StripeTransactionInfo.findOne({
+    const stripeTransaction = await StripeTransactionInfo.findOne({
       where: { order_payment_info }
     })
 
     return res.json({
-      role
+      stripeTransaction
     })
   }catch(err){
     res.status(err.status || 500).json({
@@ -162,7 +162,6 @@ router.post('/create-checkout-session', authenticateJWT, async (req, res) => {
   const rawBody = req.body.toString();
   const parsedBody = JSON.parse(rawBody);
 
-  console.log("PARSED "+JSON.stringify(parsedBody))
   try {
     const customer = await stripe.customers.create({
       metadata: {

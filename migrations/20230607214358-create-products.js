@@ -13,7 +13,7 @@ module.exports = {
         allowNull: false
       },
       description: {
-        type: DataTypes.STRING,
+        type: DataTypes.TEXT,
         allowNull: false
       },
       sku: {
@@ -30,6 +30,11 @@ module.exports = {
         type: DataTypes.STRING,
         allowNull: false
       },
+      discount_percentage: {
+        type: DataTypes.DECIMAL(5, 2),
+        allowNull: true,
+        defaultValue: 0
+      },
       quantity: {
         type: DataTypes.STRING,
         allowNull: false
@@ -37,6 +42,31 @@ module.exports = {
       img_url: {
         type: DataTypes.STRING,
         allowNull: true
+      },
+      highlights: {
+        type: DataTypes.TEXT,
+        allowNull: true
+      },
+      metadata: {
+        type: DataTypes.JSON,
+        allowNull: true
+      },
+      ref_color: {
+        type: DataTypes.STRING,
+        allowNull: true
+      },
+      uses: {
+        type: DataTypes.JSON,
+        allowNull: true
+      },
+      is_discount: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false
+      },
+      is_hot: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+        defaultValue: false
       },
       is_active: {
         type: DataTypes.BOOLEAN,

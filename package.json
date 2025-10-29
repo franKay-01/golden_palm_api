@@ -23,6 +23,7 @@
     "geolib": "^3.3.4",
     "jsonwebtoken": "^9.0.0",
     "morgan": "^1.10.0",
+    "multer": "^2.0.2",
     "node-schedule": "^2.1.1",
     "pg": "^8.9.0",
     "pg-hstore": "^2.3.4",

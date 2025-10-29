@@ -3,6 +3,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const jwtSecret = crypto.randomBytes(64).toString('hex');
+const { authenticateJWT } = require('../../middleware/authenticate');
 
 const router = express.Router();
 const {Users} = require('../../models');
@@ -13,23 +14,20 @@ const errorHandler = (err, res) => {
   res.status(status).json({ error: { message: err.message } });
 };
 
-router.get('/', async (req, res, next) => {
-  try{
-    const users = await Users.findAll()
-    return res.json({
-      response_code: '000',  
-      users
-    })
-  }catch(err){
-    errorHandler(err, res)
-  }
-})
+// router.get('/', async (req, res, next) => {
+//   try{
+//     const users = await Users.findAll()
+//     return res.json({
+//       response_code: '000',  
+//       users
+//     })
+//   }catch(err){
+//     errorHandler(err, res)
+//   }
+// })
 
-router.post('/status', async (req, res, next) => {
-  const rawBody = req.body.toString();
-  const parsedBody = JSON.parse(rawBody);
-
-  const {reference_no} = parsedBody;
+router.post('/status', authenticateJWT, async (req, res, next) => {
+  const {reference_no} = req.body;
 
   try{
     const user = await Users.findOne({where: { reference_no } })
@@ -46,11 +44,8 @@ router.post('/status', async (req, res, next) => {
   }
 })
 
-router.post('/signin', async (req, res, next) => {
-  const rawBody = req.body.toString();
-  const parsedBody = JSON.parse(rawBody);
-
-  const { password, username } = parsedBody;
+router.post('/portal/signin', async (req, res, next) => {
+  const { password, username } = req.body;
 
   try{
     const user = await Users.findOne({ where: { username } });
@@ -59,6 +54,13 @@ router.post('/signin', async (req, res, next) => {
       return res.status(200).json({ 
         response_code: 201,
         error: { message: 'User details does not exist. Kindly sign up' } 
+      });
+    }
+
+    if (user.role_id !== 1){
+      return res.status(200).json({ 
+        response_code: 201,
+        error: { message: 'User does not have necessary clearance.' } 
       });
     }
 
@@ -85,11 +87,46 @@ router.post('/signin', async (req, res, next) => {
   }
 })
 
-router.post('/', async (req, res, next) => {
-  const rawBody = req.body.toString();
-  const parsedBody = JSON.parse(rawBody);
 
-  const {first_name, last_name, email, password, username, country} = parsedBody;
+router.post('/signin', async (req, res, next) => {
+  const { password, username } = req.body;
+
+  try{
+    const user = await Users.findOne({ where: { username } });
+
+    if (!user) {
+      return res.status(200).json({ 
+        response_code: 201,
+        error: { message: 'User details does not exist. Kindly sign up' } 
+      });
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+
+    if (!isPasswordValid) {
+      return res.status(200).json({ 
+        error: { message: 'Invalid username or password'} 
+      });
+    }
+
+    const token = jwt.sign({ id: user.reference_no, username: user.username }, process.env.TOKEN_KEY, {
+      expiresIn: '1h',
+    });
+
+    res.status(200).json({    
+      response_code: 200,   
+      username: user.username,
+      userType: user.role_id,
+      token 
+    });
+
+  }catch(err){
+    errorHandler(err, res)
+  }
+})
+
+router.post('/', async (req, res, next) => {
+  const {first_name, last_name, email, password, username, country} = req.body;
 
   try{
     const existingUser = await Users.findOne({ where: { username } });
@@ -100,7 +137,7 @@ router.post('/', async (req, res, next) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const user = await Users.create({first_name, last_name, email, password: hashedPassword, username, country, role_id: 2})
+    const user = await Users.create({first_name, last_name, email, password: hashedPassword, username, country, role_id: 1})
 
     return res.status(200).json({
       response_code: 200,
@@ -112,9 +149,8 @@ router.post('/', async (req, res, next) => {
   }
 })
 
-router.post('/change-user-password', async (req, res) => {
-  const rawBody = req.body.toString();
-  const { username, password } = JSON.parse(rawBody);
+router.post('/change-user-password', authenticateJWT, async (req, res) => {
+  const { username, password } = req.body;
 
   try {
     const existingUser = await Users.findOne({ where: { username } });
@@ -143,7 +179,7 @@ router.post('/change-user-password', async (req, res) => {
   }
 })
 
-router.get('/:reference_no', async (req, res, next) => {
+router.get('/:reference_no', authenticateJWT, async (req, res, next) => {
   const reference_no = req.params.reference_no;
   try{
     const user = await Users.findOne({
@@ -163,7 +199,7 @@ router.get('/:reference_no', async (req, res, next) => {
   }
 })
 
-router.put('/:reference_no', async (req, res, next) => {
+router.put('/:reference_no', authenticateJWT, async (req, res, next) => {
   const reference_no = req.params.reference_no;
   const { first_name, last_name, email, phone_number } = req.body;
 
