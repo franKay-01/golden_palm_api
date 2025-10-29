@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const config = {
   development: {
     // username: "golden_palm_user",
