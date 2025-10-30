@@ -18,7 +18,7 @@ const cart = require('./api/routes/cart')
 
 const cors = require('cors');
 
-const allowedOrigins = ['http://localhost:4010', 'http://localhost:8020'];
+const allowedOrigins = ['http://localhost:4010', 'http://localhost:8020', 'http://portal.goldenpalmfoods.com'];
 
 const corsOptions = {
   origin: (origin, callback) => {
