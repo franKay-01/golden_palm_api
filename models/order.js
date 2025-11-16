@@ -6,7 +6,7 @@ module.exports = (sequelize, DataTypes) => {
 
   class Order extends Model {
     static associate({Users, StripeTransactionInfo, OrderItems}) {
-      this.belongsTo(Users, {foreignKey: 'user_reference_no', targetKey: 'reference_no', as: 'users'})
+      // Remove association with Users since user_reference_no is now an email string
       this.hasOne(StripeTransactionInfo, {foreignKey: 'order_reference_no' , as: 'stripeTransaction'})
       this.hasMany(OrderItems, {foreignKey: 'order_reference_no' , as: 'orderItems'})
     }
@@ -17,11 +17,12 @@ module.exports = (sequelize, DataTypes) => {
   }
   Order.init({
     user_reference_no : {
-      type: DataTypes.UUID,
+      type: DataTypes.STRING(255),
       allowNull: false,
       validate: {
-        notNull: {msg: "User reference is a required field"},
-        notEmpty: {msg: "User reference is a required field"}
+        notNull: {msg: "User email is a required field"},
+        notEmpty: {msg: "User email is a required field"},
+        isEmail: {msg: "Must be a valid email address"}
       }
     },
     order_custom_id: {

@@ -5,9 +5,9 @@ const fs = require('fs');
 const multer = require('multer');
 const path = require('path');
 const { authenticateJWT, authenticateAdmin } = require("../../middleware/authenticate");
-const { Users, Orders, Products, Categories, 
-  ShippingItemPrice, SubscriptionEmails, 
-  PasswordToken, ClientContact, Recipes } = require('../../models');
+const { Users, Orders, Products, Categories,
+  ShippingItemPrice, SubscriptionEmails,
+  PasswordToken, ClientContact, Recipes, CuratedBundles } = require('../../models');
 
 const { sendSalesEmail, sendTokenEmail } = require('../../utils');
 
@@ -508,6 +508,50 @@ router.get('/product-info', async (req, res, next) => {
   }
 });
 
+router.get('/product-info/category/:categoryName', async (req, res, next) => {
+  const categoryName = req.params.categoryName;
+
+  try {
+    // Find the category by name
+    console.log("categoryName ", categoryName)
+    const category = await Categories.findOne({
+      where: { name: categoryName }
+    });
+
+    if (!category) {
+      return res.status(404).json({
+        response_code: '001',
+        error: {
+          message: 'Category not found'
+        }
+      });
+    }
+
+    // Find all products in this category
+    const products = await Products.findAll({
+      where: {
+        category_ref_no: category.reference_no,
+        is_active: true
+      },
+      include: [
+        {
+          model: Categories,
+          as: 'categories'
+        }
+      ],
+      order: [['createdAt', 'DESC']]
+    });
+
+    res.status(200).json({
+      response_code: '000',
+      category,
+      products
+    });
+  } catch (err) {
+    errorHandler(err, res);
+  }
+});
+
 router.get('/home-analytics', authenticateJWT, async (req, res, next) => {
   try {
     const [userCount, orderCount, productCount, latestUsers, latestOrders] = await Promise.all([
@@ -532,6 +576,54 @@ router.get('/home-analytics', authenticateJWT, async (req, res, next) => {
       productCount,
       latestUsers,
       latestOrders
+    });
+  } catch (err) {
+    errorHandler(err, res);
+  }
+});
+
+router.get('/products-and-bundles', async (req, res, next) => {
+  try {
+    const [products, bundles] = await Promise.all([
+      Products.findAll({
+        where: { is_active: true },
+        include: [
+          {
+            model: Categories,
+            as: 'categories'
+          }
+        ],
+        order: [['createdAt', 'DESC']]
+      }),
+      CuratedBundles.findAll({
+        where: { is_active: true },
+        order: [['createdAt', 'DESC']]
+      })
+    ]);
+
+    // Fetch product details for each bundle
+    for (const bundle of bundles) {
+      if (bundle.products && Array.isArray(bundle.products) && bundle.products.length > 0) {
+        const productDetails = await Products.findAll({
+          where: {
+            sku: bundle.products
+          },
+          include: [
+            {
+              model: Categories,
+              as: 'categories'
+            }
+          ]
+        });
+        bundle.dataValues.product_details = productDetails;
+      }
+    }
+
+    res.status(200).json({
+      response_code: '000',
+      response_message: 'Products and bundles retrieved successfully',
+      products,
+      bundles
     });
   } catch (err) {
     errorHandler(err, res);

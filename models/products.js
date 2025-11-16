@@ -105,6 +105,34 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       defaultValue: true
     },
+    weight: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: true,
+      comment: 'Product weight in ounces'
+    },
+    has_variations: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+      comment: 'Whether product has heat level variations'
+    },
+    variations: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      comment: 'Product variations with heat levels and images',
+      validate: {
+        isValidVariations(value) {
+          if (value !== null && value !== undefined) {
+            if (!Array.isArray(value)) {
+              throw new Error('Variations must be an array');
+            }
+            if (!value.every(item => item.heat_level && item.img_url)) {
+              throw new Error('Each variation must have heat_level and img_url');
+            }
+          }
+        }
+      }
+    }
   }, {
     sequelize,
     tableName: 'products',

@@ -15,6 +15,8 @@ const common = require("./api/routes/common")
 const curatedBundles = require('./api/routes/curated_bundles')
 const reviews = require('./api/routes/reviews')
 const cart = require('./api/routes/cart')
+const blogs = require('./api/routes/blogs')
+const cookingClasses = require('./api/routes/cooking_classes')
 
 const cors = require('cors');
 
@@ -67,6 +69,9 @@ const allowOnlyAllowedCountries = (req, res, next) => {
 app.use(morgan('dev'));
 app.use('/uploads', express.static('uploads'));
 
+// Stripe webhook needs raw body - handle it BEFORE body parser
+app.use('/stripe/webhook', express.raw({ type: 'application/json' }));
+
 // Skip body parsing for multipart/form-data (let multer handle it)
 app.use((req, res, next) => {
   if (req.headers['content-type'] && req.headers['content-type'].includes('multipart/form-data')) {
@@ -77,9 +82,6 @@ app.use((req, res, next) => {
 
 app.use(bodyParser.json()); // Middleware for reading request body
 app.use(bodyParser.urlencoded({extended: true}));
-// app.use(bodyParser.raw({type: "*/*"}))
-app.use(bodyParser.json())
-app.use('stripe/webhook', bodyParser.raw({type: "*/*"}))
 
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Credentials', 'true');
@@ -92,6 +94,10 @@ app.use((req, res, next) => {
   next();
 })
 
+app.get('/', async (req, res) => {
+  return res.send("Welcome to Golden Palm Foods")
+})
+
 app.use('/product-info', productInfoRoutes);
 app.use('/users', userRoutes);
 app.use('/categories', categoryRoutes);
@@ -102,6 +108,8 @@ app.use('/common', common)
 app.use('/curated-bundles', curatedBundles)
 app.use('/reviews', reviews)
 app.use('/cart', cart)
+app.use('/blogs', blogs)
+app.use('/cooking-classes', cookingClasses)
 
 app.use((req, res, next) => {
   const error = new Error('Not Found');

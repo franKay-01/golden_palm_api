@@ -4,11 +4,8 @@ const {
 } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
   class Reviews extends Model {
-    static associate({Orders, Users, Products, CuratedBundles}) {
+    static associate({Orders}) {
       this.belongsTo(Orders, { foreignKey: 'order_id', targetKey: 'reference_no', as: 'order' });
-      this.belongsTo(Users, { foreignKey: 'user_id', targetKey: 'reference_no', as: 'user' });
-      this.belongsTo(Products, { foreignKey: 'item_id', targetKey: 'sku', as: 'product', constraints: false });
-      this.belongsTo(CuratedBundles, { foreignKey: 'item_id', targetKey: 'bundle_id', as: 'bundle', constraints: false });
     }
 
     toJSON(){
@@ -24,12 +21,11 @@ module.exports = (sequelize, DataTypes) => {
         notEmpty: {msg: "Order ID is required"}
       }
     },
-    user_id: {
-      type: DataTypes.UUID,
-      allowNull: false,
+    user_email: {
+      type: DataTypes.STRING,
+      allowNull: true,
       validate: {
-        notNull: {msg: "User ID is required"},
-        notEmpty: {msg: "User ID is required"}
+        isEmail: {msg: "Valid email is required"}
       }
     },
     item_type: {
@@ -41,14 +37,6 @@ module.exports = (sequelize, DataTypes) => {
           args: [['product', 'bundle']],
           msg: "Item type must be either 'product' or 'bundle'"
         }
-      }
-    },
-    item_id: {
-      type: DataTypes.UUID,
-      allowNull: false,
-      validate: {
-        notNull: {msg: "Item ID is required"},
-        notEmpty: {msg: "Item ID is required"}
       }
     },
     rating: {

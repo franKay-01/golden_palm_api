@@ -4,9 +4,9 @@ const {
 } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
   class OrderItems extends Model {
-    static associate({Orders, Products}) {
-      this.belongsTo(Orders, {foreignKey: 'order_reference_no', targetKey: 'reference_no', as: 'orders'}),
-      this.belongsTo(Products, {foreignKey: 'product_reference_no', targetKey: 'sku', as: 'products'})
+    static associate({Orders, Products, CuratedBundles}) {
+      this.belongsTo(Orders, {foreignKey: 'order_reference_no', targetKey: 'reference_no', as: 'orders'})
+      // No direct associations - we'll handle polymorphic manually
     }
 
     toJSON(){
@@ -26,13 +26,18 @@ module.exports = (sequelize, DataTypes) => {
         notEmpty: {msg: "Product reference is a required field"}
       }
     },
-    product_reference_no: {
-      type: DataTypes.UUID, 
+    item_reference_no: {
+      type: DataTypes.UUID,
       allowNull: false,
       validate: {
-        notNull: {msg: "Product reference is a required field"},
-        notEmpty: {msg: "Product reference is a required field"}
+        notNull: {msg: "Item reference is a required field"},
+        notEmpty: {msg: "Item reference is a required field"}
       }
+    },
+    item_type: {
+      type: DataTypes.ENUM('product', 'bundle'),
+      allowNull: false,
+      defaultValue: 'product'
     },
     quantity: {
       type: DataTypes.INTEGER,
@@ -49,16 +54,17 @@ module.exports = (sequelize, DataTypes) => {
       validate: {
         notNull: {msg: "Product amount is a required field"},
         notEmpty: {msg: "Product amount is a required field"}
-      },
-    desc: {
-        type: DataTypes.STRING,
-        allowNull: false,
-        validate: {
-          notNull: {msg: "Product name is a required field"},
-          notEmpty: {msg: "Product name is a required field"}
-        }
-      },
+      }
     },
+    desc: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      defaultValue: 'Product'
+    },
+    heat_level: {
+      type: DataTypes.STRING(50),
+      allowNull: true
+    }
   }, {
     sequelize,
     tableName: 'order_items',

@@ -29,9 +29,9 @@ router.get('/', authenticateJWT, async (req, res) => {
 
 router.post('/', authenticateAdmin, async (req, res) => {
   const { category_name } = req.body;
-  
+
   try {
-    await Categories.create({ name: category_name });
+    await Categories.create({ name: category_name.toLowerCase() });
     res.status(201).json({
       response_message: "Category successfully created",
       response_code: '000'
@@ -54,24 +54,32 @@ router.get('/:reference_no', async (req, res) => {
   }
 });
 
-router.post('/update', async (req, res, next) => {
-  const rawBody = req.body.toString();
-  const parsedBody = JSON.parse(rawBody);
+router.post('/update', authenticateAdmin, async (req, res, next) => {
+  const {name, reference_no} = req.body;
 
-  const {name, reference_no} = parsedBody;
-  
   try{
     const category = await Categories.findOne({where: { reference_no } })
-    category.name = name
 
+    if (!category) {
+      return res.status(404).json({
+        response_code: '001',
+        error: {
+          message: 'Category not found'
+        }
+      });
+    }
+
+    category.name = name.toLowerCase()
     await category.save()
-  
+
     res.status(200).json({
       response_message:"Category edited successfully",
-      response_code: '000'
+      response_code: '000',
+      category
     })
   }catch(err){
     res.status(err.status || 500).json({
+      response_code: '001',
       error: {
         message: err.message
       }

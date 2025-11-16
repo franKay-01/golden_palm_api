@@ -16,21 +16,8 @@ router.get('/', async (req, res) => {
       where: { is_active: true },
       include: [
         {
-          model: Users,
-          as: 'user',
-          attributes: ['first_name', 'last_name']
-        },
-        {
-          model: Products,
-          as: 'product',
-          attributes: ['sku', 'name', 'img_url'],
-          required: false
-        },
-        {
-          model: CuratedBundles,
-          as: 'bundle',
-          attributes: ['bundle_id', 'name', 'img_url'],
-          required: false
+          model: Orders,
+          as: 'order',
         }
       ],
       order: [['createdAt', 'DESC']]
@@ -47,7 +34,7 @@ router.get('/', async (req, res) => {
 });
 
 // Get reviews for a specific order
-router.get('/order/:order_id', authenticateJWT, async (req, res) => {
+router.get('/order/:order_id', async (req, res) => {
   const order_id = req.params.order_id;
 
   try {
@@ -55,9 +42,9 @@ router.get('/order/:order_id', authenticateJWT, async (req, res) => {
       where: { order_id, is_active: true },
       include: [
         {
-          model: Users,
-          as: 'user',
-          attributes: ['first_name', 'last_name']
+          model: Orders,
+          as: 'order',
+          attributes: ['reference_no', 'order_custom_id']
         }
       ]
     });
@@ -72,101 +59,45 @@ router.get('/order/:order_id', authenticateJWT, async (req, res) => {
   }
 });
 
-// Get reviews by a specific user
-router.get('/user/:user_id', authenticateJWT, async (req, res) => {
-  const user_id = req.params.user_id;
-
-  try {
-    const reviews = await Reviews.findAll({
-      where: { user_id, is_active: true },
-      include: [
-        {
-          model: Orders,
-          as: 'order',
-          attributes: ['reference_no', 'order_custom_id']
-        }
-      ],
-      order: [['createdAt', 'DESC']]
-    });
-
-    res.json({
-      response_code: '000',
-      reviews,
-      response_message: "User reviews retrieved successfully"
-    });
-  } catch (err) {
-    errorHandler(err, res);
-  }
-});
-
-// Get reviews for a specific product
-router.get('/product/:item_id', async (req, res) => {
-  const item_id = req.params.item_id;
-
-  try {
-    const reviews = await Reviews.findAll({
-      where: { item_id, item_type: 'product', is_active: true },
-      include: [
-        {
-          model: Users,
-          as: 'user',
-          attributes: ['first_name', 'last_name']
-        },
-        {
-          model: Products,
-          as: 'product',
-          attributes: ['sku', 'name', 'img_url']
-        }
-      ],
-      order: [['createdAt', 'DESC']]
-    });
-
-    res.json({
-      response_code: '000',
-      reviews,
-      response_message: "Product reviews retrieved successfully"
-    });
-  } catch (err) {
-    errorHandler(err, res);
-  }
-});
-
-// Get reviews for a specific bundle
-router.get('/bundle/:item_id', async (req, res) => {
-  const item_id = req.params.item_id;
-
-  try {
-    const reviews = await Reviews.findAll({
-      where: { item_id, item_type: 'bundle', is_active: true },
-      include: [
-        {
-          model: Users,
-          as: 'user',
-          attributes: ['first_name', 'last_name']
-        },
-        {
-          model: CuratedBundles,
-          as: 'bundle',
-          attributes: ['bundle_id', 'name', 'img_url']
-        }
-      ],
-      order: [['createdAt', 'DESC']]
-    });
-
-    res.json({
-      response_code: '000',
-      reviews,
-      response_message: "Bundle reviews retrieved successfully"
-    });
-  } catch (err) {
-    errorHandler(err, res);
-  }
-});
-
 // Create a new review
-router.post('/', authenticateJWT, async (req, res) => {
+router.post('/', async (req, res) => {
+  const jwt = require('jsonwebtoken');
+
   try {
-    const {order_id, user_id, item_type, item_id, rating, comment} = req.body;
+    const {order_id, item_type, rating, comment, token} = req.body;
+
+    // Verify token if provided
+    if (!token) {
+      return res.status(400).json({
+        response_code: '001',
+        response_message: "Review token is required"
+      });
+    }
+
+    let decodedToken;
+    try {
+      decodedToken = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (err) {
+      return res.status(401).json({
+        response_code: '001',
+        response_message: "Invalid or expired review token"
+      });
+    }
+
+    // Verify token purpose and order match
+    if (decodedToken.purpose !== 'review') {
+      return res.status(401).json({
+        response_code: '001',
+        response_message: "Invalid token purpose"
+      });
+    }
+
+    if (decodedToken.order_reference_no !== order_id) {
+      return res.status(401).json({
+        response_code: '001',
+        response_message: "Token does not match order"
+      });
+    }
 
     // Check if order exists
     const order = await Orders.findOne({ where: { reference_no: order_id } });
@@ -177,42 +108,22 @@ router.post('/', authenticateJWT, async (req, res) => {
       });
     }
 
-    // Verify that the item exists
-    if (item_type === 'product') {
-      const product = await Products.findOne({ where: { sku: item_id } });
-      if (!product) {
-        return res.status(404).json({
-          response_code: '001',
-          response_message: "Product not found"
-        });
-      }
-    } else if (item_type === 'bundle') {
-      const bundle = await CuratedBundles.findOne({ where: { bundle_id: item_id } });
-      if (!bundle) {
-        return res.status(404).json({
-          response_code: '001',
-          response_message: "Bundle not found"
-        });
-      }
-    }
-
-    // Check if user already reviewed this item in this order
+    // Check if user already reviewed this order with this item type
     const existingReview = await Reviews.findOne({
-      where: { order_id, user_id, item_id, item_type }
+      where: { order_id, user_email: decodedToken.email, item_type }
     });
 
     if (existingReview) {
-      return res.status(400).json({
+      return res.status(200).json({
         response_code: '002',
-        response_message: "You have already reviewed this item"
+        response_message: "You have already submitted a review for this order"
       });
     }
 
     const review = await Reviews.create({
       order_id,
-      user_id,
+      user_email: decodedToken.email,
       item_type,
-      item_id,
       rating,
       comment
     });
