@@ -20,7 +20,7 @@ const cookingClasses = require('./api/routes/cooking_classes')
 
 const cors = require('cors');
 
-const allowedOrigins = ['http://localhost:4010', 'http://localhost:8020', 'https://portal.goldenpalmfoods.com'];
+const allowedOrigins = ['http://localhost:4010', 'http://localhost:8020', 'https://portal.goldenpalmfoods.com', 'https://web.goldenpalmfoods.com'];
 
 const corsOptions = {
   origin: (origin, callback) => {
