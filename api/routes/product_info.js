@@ -81,7 +81,7 @@ router.get('/', async (req, res, next) => {
 
 router.post('/', authenticateAdmin, uploadMultiple.any(), async (req, res, next) => {
   try{
-    const {name, description, price, category_ref_no, slug, highlights, uses, metadata, is_discount, ref_color, is_hot, weight, has_variations, variation_data} = req.body;
+    const {name, description, price, category_ref_no, slug, highlights, uses, metadata, is_discount, ref_color, is_hot, weight, weight_type, has_variations, variation_data, ingredients} = req.body;
 
     console.log('Body:', req.body);
     console.log('Files:', req.files);
@@ -97,10 +97,28 @@ router.post('/', authenticateAdmin, uploadMultiple.any(), async (req, res, next)
 
     const parsedUses = uses ? (typeof uses === 'string' ? JSON.parse(uses) : uses) : null;
     const parsedMetadata = metadata ? (typeof metadata === 'string' ? JSON.parse(metadata) : metadata) : null;
+
+    // Handle ingredients - support both JSON and comma-separated string
+    let parsedIngredients = null;
+    if (ingredients) {
+      if (typeof ingredients === 'string') {
+        try {
+          // Try parsing as JSON first
+          parsedIngredients = JSON.parse(ingredients);
+        } catch (e) {
+          // If JSON parse fails, treat as comma-separated string
+          parsedIngredients = ingredients.split(',').map(item => item.trim()).filter(item => item.length > 0);
+        }
+      } else {
+        parsedIngredients = ingredients;
+      }
+    }
+
     const hasVariations = has_variations === 'true' || has_variations === true;
 
     let mainImgUrl;
     let variations = null;
+    let additionalImages = [];
 
     if (hasVariations && variation_data) {
       // Parse variation data: [{heat_level: "mild"}, {heat_level: "med"}, {heat_level: "hot"}]
@@ -117,9 +135,18 @@ router.post('/', authenticateAdmin, uploadMultiple.any(), async (req, res, next)
 
       // Use first variation image as main image
       mainImgUrl = variations[0]?.img_url;
+
+      // Get additional images (files that aren't variation images)
+      // const variationFiles = req.files.filter(f => f.fieldname.startsWith('variation_'));
+      const additionalFiles = req.files.filter(f => f.fieldname === 'additional_images');
+      additionalImages = additionalFiles.map(file => `/uploads/products/${file.filename}`);
     } else {
-      // Single image product
+      // Single image product - first file is main image
       mainImgUrl = `/uploads/products/${req.files[0].filename}`;
+
+      // Rest are additional images
+      const additionalFiles = req.files.slice(1);
+      additionalImages = additionalFiles.map(file => `/uploads/products/${file.filename}`);
     }
 
     const productInfo = await Products.create({
@@ -137,8 +164,11 @@ router.post('/', authenticateAdmin, uploadMultiple.any(), async (req, res, next)
       ref_color,
       is_hot,
       weight: weight ? parseFloat(weight) : null,
+      weight_type: weight_type || 'oz',
       has_variations: hasVariations,
-      variations: variations
+      variations: variations,
+      additional_images: additionalImages.length > 0 ? additionalImages : null,
+      ingredients: parsedIngredients
     })
 
     res.status(200).json({
@@ -146,7 +176,9 @@ router.post('/', authenticateAdmin, uploadMultiple.any(), async (req, res, next)
       response_code: '000',
       product_ref_no: productInfo.sku,
       img_url: mainImgUrl,
-      variations: variations
+      variations: variations,
+      additional_images: additionalImages,
+      ingredients: parsedIngredients
     })
   }catch(err){
     console.log(err)
@@ -248,9 +280,9 @@ router.post('/status', authenticateAdmin, async (req, res, next) => {
   }
 })
 
-router.post('/:sku', authenticateAdmin, upload.single('img_url'), async (req, res, next) => {
+router.post('/:sku', authenticateAdmin, uploadMultiple.any(), async (req, res, next) => {
   const sku = req.params.sku;
-  const {name, description, price, category_ref_no, slug, ref_color, is_hot, highlights, uses, weight} = req.body;
+  const {name, description, price, category_ref_no, slug, ref_color, is_hot, highlights, uses, weight, weight_type, ingredients, keep_existing_additional_images} = req.body;
 
   try{
     const product = await Products.findOne({where: { sku } })
@@ -271,9 +303,11 @@ router.post('/:sku', authenticateAdmin, upload.single('img_url'), async (req, re
     if (slug) product.slug = slug;
     if (is_hot) product.is_hot = is_hot;
     if (weight !== undefined) product.weight = weight ? parseFloat(weight) : null;
+    if (weight_type) product.weight_type = weight_type;
 
-    // Handle image update
-    if (req.file) {
+    // Handle main image update
+    const mainImageFile = req.files?.find(f => f.fieldname === 'img_url');
+    if (mainImageFile) {
       // Delete old image file if it exists
       if (product.img_url) {
         const oldImagePath = path.join(__dirname, '../../', product.img_url);
@@ -281,7 +315,30 @@ router.post('/:sku', authenticateAdmin, upload.single('img_url'), async (req, re
           fs.unlinkSync(oldImagePath);
         }
       }
-      product.img_url = `/uploads/products/${req.file.filename}`;
+      product.img_url = `/uploads/products/${mainImageFile.filename}`;
+    }
+
+    // Handle additional images update
+    const additionalImageFiles = req.files?.filter(f => f.fieldname === 'additional_images') || [];
+    if (additionalImageFiles.length > 0) {
+      const newAdditionalImages = additionalImageFiles.map(file => `/uploads/products/${file.filename}`);
+
+      // If keep_existing_additional_images is true, append to existing images
+      if (keep_existing_additional_images === 'true' && product.additional_images) {
+        product.additional_images = [...product.additional_images, ...newAdditionalImages];
+      } else {
+        // Replace existing additional images
+        if (product.additional_images && product.additional_images.length > 0) {
+          // Delete old additional image files
+          product.additional_images.forEach(imgUrl => {
+            const oldImagePath = path.join(__dirname, '../../', imgUrl);
+            if (fs.existsSync(oldImagePath)) {
+              fs.unlinkSync(oldImagePath);
+            }
+          });
+        }
+        product.additional_images = newAdditionalImages;
+      }
     }
 
     // Parse and update JSON fields if provided
@@ -290,6 +347,20 @@ router.post('/:sku', authenticateAdmin, upload.single('img_url'), async (req, re
     }
     if (uses) {
       product.uses = typeof uses === 'string' ? JSON.parse(uses) : uses;
+    }
+    if (ingredients) {
+      // Handle ingredients - support both JSON and comma-separated string
+      if (typeof ingredients === 'string') {
+        try {
+          // Try parsing as JSON first
+          product.ingredients = JSON.parse(ingredients);
+        } catch (e) {
+          // If JSON parse fails, treat as comma-separated string
+          product.ingredients = ingredients.split(',').map(item => item.trim()).filter(item => item.length > 0);
+        }
+      } else {
+        product.ingredients = ingredients;
+      }
     }
 
     await product.save()

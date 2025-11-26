@@ -108,7 +108,13 @@ module.exports = (sequelize, DataTypes) => {
     weight: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: true,
-      comment: 'Product weight in ounces'
+      comment: 'Product weight value'
+    },
+    weight_type: {
+      type: DataTypes.ENUM('oz', 'lbs', 'g', 'kg', 'ml', 'l'),
+      allowNull: true,
+      defaultValue: 'oz',
+      comment: 'Unit of measurement for product weight (oz, lbs, g, kg, ml, l)'
     },
     has_variations: {
       type: DataTypes.BOOLEAN,
@@ -132,6 +138,28 @@ module.exports = (sequelize, DataTypes) => {
           }
         }
       }
+    },
+    additional_images: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      comment: 'Array of additional product image URLs',
+      validate: {
+        isArrayOfStrings(value) {
+          if (value !== null && value !== undefined) {
+            if (!Array.isArray(value)) {
+              throw new Error('Additional images must be an array');
+            }
+            if (!value.every(item => typeof item === 'string')) {
+              throw new Error('All additional image items must be strings');
+            }
+          }
+        }
+      }
+    },
+    ingredients: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      comment: 'Product ingredients information'
     }
   }, {
     sequelize,
