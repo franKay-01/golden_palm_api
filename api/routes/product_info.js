@@ -23,6 +23,10 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage: storage,
+  limits: {
+    fileSize: 15 * 1024 * 1024, // 15MB per file
+    files: 1 // 1 file for single upload
+  },
   fileFilter: (req, file, cb) => {
     const allowedTypes = /jpeg|jpg|png|gif|webp/;
     const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
@@ -39,6 +43,11 @@ const upload = multer({
 // Support multiple file uploads for variations
 const uploadMultiple = multer({
   storage: storage,
+  limits: {
+    fileSize: 15 * 1024 * 1024, // 15MB per file
+    files: 15, // Max 15 files (variations + additional images)
+    fieldSize: 150 * 1024 * 1024 // 150MB total request size
+  },
   fileFilter: (req, file, cb) => {
     const allowedTypes = /jpeg|jpg|png|gif|webp/;
     const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
@@ -407,7 +416,7 @@ router.post('/add/:sku', authenticateAdmin, async (req, res, next) => {
     const product = await Products.findOne({where: { sku } })
     product.is_active = true;
     await product.save()
-  
+
     res.status(200).json({
       response_message:"Product edited successfully",
       response_code: '000'
@@ -420,5 +429,67 @@ router.post('/add/:sku', authenticateAdmin, async (req, res, next) => {
     })
   }
 })
+
+router.delete('/:sku/additional-image', authenticateAdmin, async (req, res, next) => {
+  const sku = req.params.sku;
+  const { image_url } = req.body;
+
+  try {
+    const product = await Products.findOne({where: { sku } });
+
+    if (!product) {
+      return res.status(404).json({
+        response_code: '001',
+        response_message: "Product not found"
+      });
+    }
+
+    if (!product.additional_images || product.additional_images.length === 0) {
+      return res.status(400).json({
+        response_code: '002',
+        response_message: "Product has no additional images"
+      });
+    }
+
+    // Find the image in the array
+    const imageIndex = product.additional_images.indexOf(image_url);
+
+    if (imageIndex === -1) {
+      return res.status(404).json({
+        response_code: '003',
+        response_message: "Image not found in product's additional images"
+      });
+    }
+
+    // Delete the physical file
+    const imagePath = path.join(__dirname, '../../', image_url);
+    if (fs.existsSync(imagePath)) {
+      fs.unlinkSync(imagePath);
+    }
+
+    // Remove from array
+    product.additional_images.splice(imageIndex, 1);
+
+    // If array is now empty, set to null
+    if (product.additional_images.length === 0) {
+      product.additional_images = null;
+    }
+
+    await product.save();
+
+    res.status(200).json({
+      response_message: "Additional image deleted successfully",
+      response_code: '000',
+      remaining_images: product.additional_images
+    });
+  } catch(err) {
+    console.error('Error deleting additional image:', err);
+    res.status(err.status || 500).json({
+      error: {
+        message: err.message
+      }
+    });
+  }
+});
 
 module.exports = router;

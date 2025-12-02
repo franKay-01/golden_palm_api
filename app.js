@@ -1,7 +1,6 @@
 const express = require('express');
 const app = express();
 const morgan = require('morgan');
-const bodyParser = require('body-parser');
 const requestIp = require('request-ip');
 const geoip = require('geoip-lite');
 
@@ -80,8 +79,9 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(bodyParser.json()); // Middleware for reading request body
-app.use(bodyParser.urlencoded({extended: true}));
+// Body parsing with reasonable limits for JSON/form data
+app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Credentials', 'true');
