@@ -116,6 +116,17 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: 'oz',
       comment: 'Unit of measurement for product weight (oz, lbs, g, kg, ml, l)'
     },
+    shipping_weight: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: true,
+      comment: 'Shipping weight value (includes packaging)'
+    },
+    shipping_weight_type: {
+      type: DataTypes.ENUM('oz', 'lbs', 'g', 'kg', 'ml', 'l'),
+      allowNull: true,
+      defaultValue: 'oz',
+      comment: 'Unit of measurement for shipping weight'
+    },
     has_variations: {
       type: DataTypes.BOOLEAN,
       allowNull: false,

@@ -5,7 +5,7 @@ const zipcode = require('zipcodes');
 const router = express.Router();
 require('dotenv').config();
 
-const { StripeTransactionInfo, Orders, OrderItems, ShippingItemPrice, CheckoutSessions, sequelize } = require('../../models');
+const { StripeTransactionInfo, Orders, OrderItems, ShippingItemPrice, CheckoutSessions, Products, CuratedBundles, sequelize } = require('../../models');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { authenticateJWT } = require("../../middleware/authenticate");
 const { sendSalesEmail, dateFormat } = require('../../utils');
@@ -210,10 +210,58 @@ router.get('/:reference_no', async (req, res, next) => {
 })
 
 router.post('/create-checkout-session', async (req, res) => {
-  
+
   const {zipcode, email, shipping_address, cart, phone_number} = req.body;
 
   try {
+    // Validate cart prices against database to prevent manipulation
+    for (const item of cart) {
+      let actualPrice = null;
+
+      if (item.type === 'product') {
+        const product = await Products.findOne({
+          where: { sku: item.id }
+        });
+
+        if (!product) {
+          return res.status(200).json({
+            response_code: 302,
+            msg: `Product with ID ${item.id} not found`
+          });
+        }
+
+        actualPrice = parseFloat(product.price);
+      } else if (item.type === 'bundle') {
+        const bundle = await CuratedBundles.findOne({
+          where: { reference_no: item.id }
+        });
+
+        if (!bundle) {
+          return res.status(200).json({
+            response_code: 303,
+            msg: `Bundle with ID ${item.id} not found`
+          });
+        }
+
+        actualPrice = parseFloat(bundle.price);
+      } else {
+        return res.status(200).json({
+          response_code: 304,
+          msg: `Invalid item type: ${item.type}`
+        });
+      }
+
+      // Compare prices (allow 0.01 difference for floating point precision)
+      const cartPrice = parseFloat(item.unit_price);
+      if (Math.abs(actualPrice - cartPrice) > 0.01) {
+        console.error(`Price mismatch for ${item.type} ${item.id}: Cart=${cartPrice}, DB=${actualPrice}`);
+        return res.status(200).json({
+          response_code: 305,
+          msg: 'Price mismatch detected. Please refresh your cart and try again.'
+        });
+      }
+    }
+
     const customer = await stripe.customers.create({
       email: email || undefined
     });
@@ -289,8 +337,8 @@ router.post('/create-checkout-session', async (req, res) => {
       line_items,
       mode: "payment",
       customer: customer.id,
-      success_url: `http://localhost:8020/success`,
-      cancel_url: `http://localhost:8020/`,
+      success_url: `https://goldenpalmfoods.com/payment-success`,
+      cancel_url: `https://goldenpalmfoods.com/`,
     });
 
     // Save checkout session with full cart data to database

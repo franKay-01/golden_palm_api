@@ -90,7 +90,7 @@ router.get('/', async (req, res, next) => {
 
 router.post('/', authenticateAdmin, uploadMultiple.any(), async (req, res, next) => {
   try{
-    const {name, description, price, category_ref_no, slug, highlights, uses, metadata, is_discount, ref_color, is_hot, weight, weight_type, has_variations, variation_data, ingredients} = req.body;
+    const {name, description, price, category_ref_no, slug, highlights, uses, metadata, is_discount, ref_color, is_hot, weight, weight_type, shipping_weight, shipping_weight_type, has_variations, variation_data, ingredients} = req.body;
 
     console.log('Body:', req.body);
     console.log('Files:', req.files);
@@ -174,6 +174,8 @@ router.post('/', authenticateAdmin, uploadMultiple.any(), async (req, res, next)
       is_hot,
       weight: weight ? parseFloat(weight) : null,
       weight_type: weight_type || 'oz',
+      shipping_weight: shipping_weight ? parseFloat(shipping_weight) : null,
+      shipping_weight_type: shipping_weight_type || 'oz',
       has_variations: hasVariations,
       variations: variations,
       additional_images: additionalImages.length > 0 ? additionalImages : null,
@@ -291,7 +293,7 @@ router.post('/status', authenticateAdmin, async (req, res, next) => {
 
 router.post('/:sku', authenticateAdmin, uploadMultiple.any(), async (req, res, next) => {
   const sku = req.params.sku;
-  const {name, description, price, category_ref_no, slug, ref_color, is_hot, highlights, uses, weight, weight_type, ingredients, keep_existing_additional_images} = req.body;
+  const {name, description, price, category_ref_no, slug, ref_color, is_hot, highlights, uses, weight, weight_type, shipping_weight, shipping_weight_type, ingredients, keep_existing_additional_images} = req.body;
 
   try{
     const product = await Products.findOne({where: { sku } })
@@ -313,6 +315,8 @@ router.post('/:sku', authenticateAdmin, uploadMultiple.any(), async (req, res, n
     if (is_hot) product.is_hot = is_hot;
     if (weight !== undefined) product.weight = weight ? parseFloat(weight) : null;
     if (weight_type) product.weight_type = weight_type;
+    if (shipping_weight !== undefined) product.shipping_weight = shipping_weight ? parseFloat(shipping_weight) : null;
+    if (shipping_weight_type) product.shipping_weight_type = shipping_weight_type;
 
     // Handle main image update
     const mainImageFile = req.files?.find(f => f.fieldname === 'img_url');
