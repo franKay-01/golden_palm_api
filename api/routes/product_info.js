@@ -384,6 +384,7 @@ router.post('/:sku', authenticateAdmin, uploadMultiple.any(), async (req, res, n
       product
     })
   }catch(err){
+    console.log("ERROR ", err)
     res.status(err.status || 500).json({
       error: {
         message: err.message

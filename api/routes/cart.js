@@ -9,6 +9,12 @@ const errorHandler = (err, res) => {
   res.status(status).json({ error: { message: err.message } });
 };
 
+// Helper function to validate UUID format
+const isValidUUID = (str) => {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return typeof str === 'string' && uuidRegex.test(str);
+};
+
 // Helper function to calculate cart totals
 const calculateTotals = (cartData) => {
   let total_amount = 0;
@@ -170,6 +176,18 @@ router.post('/sync', async (req, res) => {
       });
     }
 
+    // Validate all product SKUs are valid UUIDs
+    if (cart_items && cart_items.length > 0) {
+      const invalidItems = cart_items.filter(item => !isValidUUID(item.id));
+      if (invalidItems.length > 0) {
+        return res.status(400).json({
+          response_code: '001',
+          response_message: "Invalid product SKU format. SKU must be a valid UUID",
+          invalid_skus: invalidItems.map(item => item.id)
+        });
+      }
+    }
+
     // Find or create cart
     let cart = await Carts.findOne({ where: { session_id } });
 
@@ -221,6 +239,15 @@ router.post('/sync', async (req, res) => {
 router.post('/items', async (req, res) => {
   try {
     const {session_id, id, name, unit_price, quantity, type, heat_level, img_url} = req.body;
+
+    // Validate product SKU is a valid UUID
+    if (!isValidUUID(id)) {
+      return res.status(400).json({
+        response_code: '001',
+        response_message: "Invalid product SKU format. SKU must be a valid UUID",
+        invalid_sku: id
+      });
+    }
 
     // Find or create cart
     let cart = await Carts.findOne({ where: { session_id } });
@@ -284,6 +311,15 @@ router.post('/items', async (req, res) => {
 router.put('/items', async (req, res) => {
   try {
     const {session_id, id, type, heat_level, quantity} = req.body;
+
+    // Validate product SKU is a valid UUID
+    if (!isValidUUID(id)) {
+      return res.status(400).json({
+        response_code: '001',
+        response_message: "Invalid product SKU format. SKU must be a valid UUID",
+        invalid_sku: id
+      });
+    }
 
     const cart = await Carts.findOne({ where: { session_id } });
 
@@ -432,6 +468,16 @@ router.post('/merge', authenticateJWT, async (req, res) => {
       return res.json({
         response_code: '000',
         response_message: "No guest cart to merge"
+      });
+    }
+
+    // Validate all product SKUs in guest cart are valid UUIDs
+    const invalidItems = guestCart.cart_data.filter(item => !isValidUUID(item.product_sku));
+    if (invalidItems.length > 0) {
+      return res.status(400).json({
+        response_code: '001',
+        response_message: "Guest cart contains invalid product SKUs. Please clear invalid items before merging.",
+        invalid_skus: invalidItems.map(item => item.product_sku)
       });
     }
 
