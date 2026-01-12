@@ -7,6 +7,7 @@ require('dotenv').config();
 
 const { StripeTransactionInfo, Orders, OrderItems, ShippingItemPrice, CheckoutSessions, Products, CuratedBundles, sequelize } = require('../../models');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+// const stripe = require('stripe')(process.env.STRIPE_KEY);
 const { authenticateJWT } = require("../../middleware/authenticate");
 const { sendSalesEmail, dateFormat } = require('../../utils');
 

@@ -24,7 +24,7 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage: storage,
   limits: {
-    fileSize: 15 * 1024 * 1024, // 15MB per file
+    fileSize: 20 * 1024 * 1024, // 20MB per file
     files: 1 // 1 file for single upload
   },
   fileFilter: (req, file, cb) => {
@@ -44,9 +44,9 @@ const upload = multer({
 const uploadMultiple = multer({
   storage: storage,
   limits: {
-    fileSize: 15 * 1024 * 1024, // 15MB per file
+    fileSize: 20 * 1024 * 1024, // 20MB per file
     files: 15, // Max 15 files (variations + additional images)
-    fieldSize: 150 * 1024 * 1024 // 150MB total request size
+    fieldSize: 300 * 1024 * 1024 // 300MB total request size
   },
   fileFilter: (req, file, cb) => {
     const allowedTypes = /jpeg|jpg|png|gif|webp/;
@@ -472,13 +472,19 @@ router.delete('/:sku/additional-image', authenticateAdmin, async (req, res, next
       fs.unlinkSync(imagePath);
     }
 
-    // Remove from array
+    // Remove from array - create new array to trigger Sequelize change detection
     product.additional_images.splice(imageIndex, 1);
 
     // If array is now empty, set to null
     if (product.additional_images.length === 0) {
       product.additional_images = null;
+    } else {
+      // Create new array reference to trigger Sequelize change detection
+      product.additional_images = [...product.additional_images];
     }
+
+    // Mark the field as changed to ensure Sequelize saves it
+    product.changed('additional_images', true);
 
     await product.save();
 
