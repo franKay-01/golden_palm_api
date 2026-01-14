@@ -3,7 +3,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const router = express.Router();
-const {Categories, Products} = require('../../models');
+const {Categories, Products, sequelize} = require('../../models');
 const { authenticateJWT, authenticateAdmin} = require("../../middleware/authenticate");
 
 // Configure multer for product image uploads
@@ -70,6 +70,9 @@ router.get('/', async (req, res, next) => {
           model: Categories, // Reference the associated model class here
           as: 'categories'   // Alias used in the association
         }
+      ],
+      order: [
+        [sequelize.cast(sequelize.col('price'), 'DECIMAL'), 'ASC']
       ]
     });
     
@@ -293,7 +296,7 @@ router.post('/status', authenticateAdmin, async (req, res, next) => {
 
 router.post('/:sku', authenticateAdmin, uploadMultiple.any(), async (req, res, next) => {
   const sku = req.params.sku;
-  const {name, description, price, category_ref_no, slug, ref_color, is_hot, highlights, uses, weight, weight_type, shipping_weight, shipping_weight_type, ingredients, keep_existing_additional_images} = req.body;
+  const {name, description, price, category_ref_no, slug, ref_color, is_hot, highlights, uses, weight, weight_type, shipping_weight, shipping_weight_type, ingredients, keep_existing_additional_images, metadata} = req.body;
 
   try{
     const product = await Products.findOne({where: { sku } })
@@ -373,6 +376,19 @@ router.post('/:sku', authenticateAdmin, uploadMultiple.any(), async (req, res, n
         }
       } else {
         product.ingredients = ingredients;
+      }
+    }
+    if (metadata) {
+      // Handle metadata - support both JSON string and object
+      if (typeof metadata === 'string') {
+        try {
+          product.metadata = JSON.parse(metadata);
+        } catch (e) {
+          console.error('Failed to parse metadata JSON:', e);
+          product.metadata = metadata;
+        }
+      } else {
+        product.metadata = metadata;
       }
     }
 

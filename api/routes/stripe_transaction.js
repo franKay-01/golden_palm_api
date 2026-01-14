@@ -44,7 +44,7 @@ const getCoordinatesForZIP = (zipCode) => {
   }
 }
 
-const calculatedShippingCost = async (fromZip, toZip, weight = 4) => {
+const calculatedShippingCost = async (fromZip, toZip, weight = 20) => {
   try {
     const distance = getDistance(fromZip, toZip);
 
@@ -284,12 +284,14 @@ router.post('/create-checkout-session', async (req, res) => {
       };
     });
 
-    let total = 0;
+    let totalWeight = 0;
+    let totalPrice = 0;
     for (const item of cart) {
-      total += parseInt(item.weight, 10);
+      totalWeight += parseInt(item.weight, 10);
+      totalPrice += parseFloat(item.unit_price) * item.quantity;
     }
 
-    const shippingCost = await calculatedShippingCost(OriginalZipCode, zipcode, total)
+    const shippingCost = await calculatedShippingCost(OriginalZipCode, zipcode)
 
     if (shippingCost === "Not Found" || !shippingCost) {
       return res.status(400).json({
@@ -298,8 +300,9 @@ router.post('/create-checkout-session', async (req, res) => {
       });
     }
 
-    // Add 3% additional charge on shipping cost
-    const shippingCostWithFee = shippingCost * 1.03;
+    // Calculate 3% of total order amount and add it to shipping cost
+    const additionalFee = totalPrice * 0.03;
+    const shippingCostWithFee = shippingCost + additionalFee;
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
