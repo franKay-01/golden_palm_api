@@ -297,7 +297,10 @@ router.post('/create-checkout-session', async (req, res) => {
         error: 'Invalid zipcode. Could not calculate shipping cost.'
       });
     }
-    
+
+    // Add 3% additional charge on shipping cost
+    const shippingCostWithFee = shippingCost * 1.03;
+
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       shipping_address_collection: {
@@ -308,10 +311,10 @@ router.post('/create-checkout-session', async (req, res) => {
           shipping_rate_data: {
             type: "fixed_amount",
             fixed_amount: {
-              amount: Math.round(shippingCost) * 100,
+              amount: Math.round(shippingCostWithFee) * 100,
               currency: "usd",
             },
-            display_name: "Shipping",
+            display_name: "Shipping and Handling",
             // Delivers between 5-7 business days
             delivery_estimate: {
               minimum: {
