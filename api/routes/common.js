@@ -7,7 +7,7 @@ const path = require('path');
 const { authenticateJWT, authenticateAdmin } = require("../../middleware/authenticate");
 const { Users, Orders, Products, Categories,
   ShippingItemPrice, SubscriptionEmails,
-  PasswordToken, ClientContact, Recipes, CuratedBundles } = require('../../models');
+  PasswordToken, ClientContact, Recipes, CuratedBundles, sequelize } = require('../../models');
 
 const { sendSalesEmail, sendTokenEmail } = require('../../utils');
 
@@ -497,6 +497,9 @@ router.get('/product-info', async (req, res, next) => {
             model: Categories, // Reference the associated model class here
             as: 'categories'   // Alias used in the association
           }
+        ],
+        order: [
+          [sequelize.cast(sequelize.col('price'), 'DECIMAL'), 'ASC']
         ]
       })
     ]);
@@ -596,11 +599,15 @@ router.get('/products-and-bundles', async (req, res, next) => {
             as: 'categories'
           }
         ],
-        order: [['createdAt', 'DESC']]
+        order: [
+          [sequelize.cast(sequelize.col('price'), 'DECIMAL'), 'ASC']
+        ]
       }),
       CuratedBundles.findAll({
         where: { is_active: true },
-        order: [['createdAt', 'DESC']]
+        order: [
+          [sequelize.cast(sequelize.col('price'), 'DECIMAL'), 'ASC']
+        ]
       })
     ]);
 
