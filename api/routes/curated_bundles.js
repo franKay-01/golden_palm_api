@@ -3,7 +3,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const router = express.Router();
-const {CuratedBundles, Products} = require('../../models');
+const {CuratedBundles, Products, sequelize} = require('../../models');
 const { authenticateJWT, authenticateAdmin } = require("../../middleware/authenticate");
 
 // Configure multer for bundle image uploads
@@ -42,7 +42,10 @@ const upload = multer({
 router.get('/', async (req, res, next) => {
   try{
     const bundles = await CuratedBundles.findAll({
-      where: { is_active: true }
+      where: { is_active: true },
+      order: [
+        [sequelize.cast(sequelize.col('price'), 'DECIMAL'), 'ASC']
+      ]
     });
 
     const bundlesWithProducts = await Promise.all(bundles.map(async (bundle) => {

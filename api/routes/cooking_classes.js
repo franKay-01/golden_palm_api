@@ -122,6 +122,34 @@ router.get('/previous', async (req, res, next) => {
   }
 });
 
+// Get single cooking class by class_id
+router.get('/:class_id', async (req, res, next) => {
+  const class_id = req.params.class_id;
+
+  try {
+    const cookingClass = await CookingClass.findOne({ where: { class_id } });
+
+    if (!cookingClass) {
+      return res.status(404).json({
+        response_code: '001',
+        response_message: "Cooking class not found"
+      });
+    }
+
+    return res.status(200).json({
+      response_code: '000',
+      response_message: 'Cooking class retrieved successfully',
+      class: cookingClass
+    });
+  } catch (err) {
+    res.status(err.status || 500).json({
+      error: {
+        message: err.message
+      }
+    });
+  }
+});
+
 // Create new cooking class
 router.post('/', authenticateAdmin, 
   uploadMultiple.fields([{ name: 'image', maxCount: 1 },{ name: 'class_images', maxCount: 10 }]), 

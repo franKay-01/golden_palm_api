@@ -305,9 +305,9 @@ router.post('/create-checkout-session', async (req, res) => {
     const shippingCostWithFee = shippingCost + additionalFee;
 
     const session = await stripe.checkout.sessions.create({
-      payment_method_types: ["card"],
+      // payment_method_types: ["card"],
       shipping_address_collection: {
-        allowed_countries: ["US", "CA", "GH"],
+        allowed_countries: ["US"],
       },
       shipping_options: [
         {
@@ -333,6 +333,9 @@ router.post('/create-checkout-session', async (req, res) => {
         }
       ],
       automatic_tax:{
+        enabled: true,
+      },
+      automatic_payment_methods: {
         enabled: true,
       },
       customer_update: {
@@ -388,12 +391,23 @@ const createOrder = async (sessionId, data) => {
   const order_custom_id = dateFormat() + '-' + randomSuffix
 
   try {
+    // Extract tax and shipping information from Stripe checkout session
+    // When automatic_tax is enabled, these fields are available:
+    const subtotal = data.amount_subtotal ? data.amount_subtotal / 100 : 0;
+    const taxAmount = data.total_details?.amount_tax ? data.total_details.amount_tax / 100 : 0;
+    const shippingAmount = data.total_details?.amount_shipping ? data.total_details.amount_shipping / 100 : 0;
+    const totalAmount = data.amount_total ? data.amount_total / 100 : subtotal + taxAmount + shippingAmount;
+
+    // Store tax and shipping info in other_info for later use
+    // Format: city,address,email,phone|tax|shipping|total
+    const otherInfo = `${data.customer_details.address.city},${data.customer_details.address.line1},${data.customer_details.email},${data.customer_details.phone}|${taxAmount}|${shippingAmount}|${totalAmount}`;
+
     const order_info = await Orders.create({
       order_custom_id,
       user_reference_no,
       quantity: Items.length,
-      amount: data.amount_subtotal/100,
-      other_info: `${data.customer_details.address.city},${data.customer_details.address.line1},${data.customer_details.email},${data.customer_details.phone}`
+      amount: totalAmount, // Store total amount including tax and shipping
+      other_info: otherInfo
     })
 
     const order_reference_no = order_info.reference_no
@@ -485,6 +499,22 @@ router.post('/webhook', async (request, response) => {
   }
   
   switch (event.type) {
+    case 'payment_intent.succeeded':
+      const payment_data = event.data.object;
+
+      try {
+        const order_id = await createOrder(payment_data.id, payment_data);
+
+        if (order_id) {
+          console.log('Order created successfully, sending email...');
+          await sendSalesEmail(payment_data.customer_details.email, order_id);
+        } else {
+          console.error('Order creation failed, skipping email');
+        }
+      } catch (err) {
+        console.error('Error in webhook handler:', err);
+      }
+      break;
     case 'checkout.session.completed':
       const data = event.data.object;
 
