@@ -64,18 +64,17 @@ const calculatedShippingCost = async (fromZip, toZip, weight = 20) => {
     else if (distance <= 1800) zone = 7;
     else zone = 8;
 
-    let baseCost = 5.15; // starting for ~1lb
-    if (weight <= 1) baseCost += 0.25;
-    else if (weight <= 3) baseCost += 0.75;
-    else if (weight <= 5) baseCost += 1.75;
-    else if (weight <= 7) baseCost += 2.20;
-    else baseCost += 3.00;
+    // Zone-based flat pricing (ignoring weight)
+    let shippingCost;
+    if (zone >= 1 && zone <= 3) {
+      shippingCost = 9.00; // Zones 1-3: $9
+    } else if (zone >= 4 && zone <= 5) {
+      shippingCost = 11.00; // Zones 4-5: $11
+    } else {
+      shippingCost = 12.00; // Zone 6 and above: $12
+    }
 
-    // Each zone adds a small multiplier
-    const zoneMultiplier = 1 + (zone - 1) * 0.05; // +5% per zone increase
-    const totalCost = (baseCost * zoneMultiplier).toFixed(2);
-
-    return parseFloat(totalCost);
+    return shippingCost;
   } catch (error) {
     console.error('Error calculating shipping:', error);
     return "Not Found";
