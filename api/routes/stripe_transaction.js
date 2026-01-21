@@ -305,7 +305,7 @@ router.post('/create-checkout-session', async (req, res) => {
     const shippingCostWithFee = shippingCost + additionalFee;
 
     const session = await stripe.checkout.sessions.create({
-      // payment_method_types: ["card"],
+      payment_method_types: ["card"],
       shipping_address_collection: {
         allowed_countries: ["US"],
       },
