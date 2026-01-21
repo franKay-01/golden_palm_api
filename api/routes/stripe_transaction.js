@@ -335,9 +335,9 @@ router.post('/create-checkout-session', async (req, res) => {
       automatic_tax:{
         enabled: true,
       },
-      automatic_payment_methods: {
-        enabled: true,
-      },
+      // automatic_payment_methods: {
+      //   enabled: true,
+      // },
       customer_update: {
         shipping: 'auto'
       },
