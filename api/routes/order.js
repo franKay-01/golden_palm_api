@@ -195,6 +195,7 @@ router.get('/:reference_no/confirmation', async (req, res, next) => {
       });
     }
 
+    console.log("ORDER ", JSON.stringify(order))
     // Manually fetch products/bundles for each order item
     if (order.orderItems) {
       for (const item of order.orderItems) {
@@ -275,18 +276,11 @@ router.get('/:reference_no/confirmation', async (req, res, next) => {
       });
     }
     
-    // Company name below logo (always visible in black)
-    doc.fillColor('black')
-       .fontSize(14)
-       .font('Helvetica-Bold')
-       .text('GOLDEN PALM FOODS LLC', 50, logoY + logoHeight + 5);
-
     // Contact info (right side of header)
     doc.fontSize(10)
        .font('Helvetica')
        .fillColor('black')
-       .text('1-800-XXX-XXXX', 400, 55, { align: 'right' })
-       .text('goldenpalmfoods.com', 400, 70, { align: 'right' });
+       .text('hello@goldenpalmfoods.com', 400, 70, { align: 'right' });
 
     // "Thank you for your order!"
     doc.fontSize(12)
@@ -301,7 +295,7 @@ router.get('/:reference_no/confirmation', async (req, res, next) => {
     const boxHeight = 60;
 
     doc.rect(boxX, boxY, boxWidth, boxHeight)
-       .fillColor('black')
+       .fillColor('#445717')
        .fill();
 
     doc.fillColor('white')
@@ -335,8 +329,9 @@ router.get('/:reference_no/confirmation', async (req, res, next) => {
       const addressPart = order.other_info.split('|')[0];
       const addressParts = addressPart.split(',');
       if (addressParts.length >= 2) {
-        shippingAddress.cityStateZip = addressParts[0].trim();
-        shippingAddress.street = addressParts[1].trim();
+        shippingAddress.company = addressParts[0].trim();
+        shippingAddress.cityStateZip = addressParts[1].trim();
+        shippingAddress.street = addressParts[2].trim();
       }
     }
 
@@ -373,14 +368,14 @@ router.get('/:reference_no/confirmation', async (req, res, next) => {
 
     // Draw header background
     doc.rect(tableStartX, yPos, 480, headerHeight)
-       .fillColor('black')
+       .fillColor('#445717')
        .fill();
 
     // Header text
     doc.fillColor('white')
        .fontSize(9)
        .font('Helvetica-Bold')
-       .text('CUSTOMER NUMBER', tableStartX + 5, yPos + 8, { width: colWidths[0] - 10 })
+       .text('CUSTOMER', tableStartX + 5, yPos + 8, { width: colWidths[0] - 10 })
        .text('SHIP VIA', tableStartX + colWidths[0] + 5, yPos + 8, { width: colWidths[1] - 10 })
        .text('ORDER DATE', tableStartX + colWidths[0] + colWidths[1] + 5, yPos + 8, { width: colWidths[2] - 10 })
        .text('SHIP DATE', tableStartX + colWidths[0] + colWidths[1] + colWidths[2] + 5, yPos + 8, { width: colWidths[3] - 10 })
@@ -397,8 +392,8 @@ router.get('/:reference_no/confirmation', async (req, res, next) => {
     doc.fontSize(9)
        .font('Helvetica')
        .fillColor('black')
-       .text(order.user_reference_no.substring(0, 15) || 'N/A', tableStartX + 5, yPos + 8, { width: colWidths[0] - 10 })
-       .text('UPS GROUND', tableStartX + colWidths[0] + 5, yPos + 8, { width: colWidths[1] - 10 })
+       .text(order.user_reference_no || 'N/A', tableStartX + 5, yPos + 8, { width: colWidths[0] - 10 })
+       .text('UPS', tableStartX + colWidths[0] + 5, yPos + 8, { width: colWidths[1] - 10 })
        .text(orderDate.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' }), tableStartX + colWidths[0] + colWidths[1] + 5, yPos + 8, { width: colWidths[2] - 10 })
        .text(shipDate.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' }), tableStartX + colWidths[0] + colWidths[1] + colWidths[2] + 5, yPos + 8, { width: colWidths[3] - 10 })
        .text('VISA', tableStartX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + 5, yPos + 8, { width: colWidths[4] - 10 });
@@ -409,14 +404,13 @@ router.get('/:reference_no/confirmation', async (req, res, next) => {
     const itemHeaderHeight = 25;
 
     doc.rect(tableStartX, yPos, 530, itemHeaderHeight)
-       .fillColor('black')
+       .fillColor('#445717')
        .fill();
 
     doc.fillColor('white')
        .fontSize(9)
        .font('Helvetica-Bold')
        .text('QUANTITY', tableStartX + 5, yPos + 8, { width: itemColWidths[0] - 10 })
-       .text('U/M', tableStartX + itemColWidths[0] + 5, yPos + 8, { width: itemColWidths[1] - 10 })
        .text('ITEM NUMBER', tableStartX + itemColWidths[0] + itemColWidths[1] + 5, yPos + 8, { width: itemColWidths[2] - 10 })
        .text('DESCRIPTION', tableStartX + itemColWidths[0] + itemColWidths[1] + itemColWidths[2] + 5, yPos + 8, { width: itemColWidths[3] - 10 })
        .text('UNIT PRICE', tableStartX + itemColWidths[0] + itemColWidths[1] + itemColWidths[2] + itemColWidths[3] + 5, yPos + 8, { width: itemColWidths[4] - 10 })
@@ -452,7 +446,6 @@ router.get('/:reference_no/confirmation', async (req, res, next) => {
          .font('Helvetica')
          .fillColor('black')
          .text(quantity.toString(), tableStartX + 5, yPos + 8, { width: itemColWidths[0] - 10 })
-         .text('EA', tableStartX + itemColWidths[0] + 5, yPos + 8, { width: itemColWidths[1] - 10 })
          .text(itemNumber, tableStartX + itemColWidths[0] + itemColWidths[1] + 5, yPos + 8, { width: itemColWidths[2] - 10 })
          .text(description.substring(0, 50), tableStartX + itemColWidths[0] + itemColWidths[1] + itemColWidths[2] + 5, yPos + 8, { width: itemColWidths[3] - 10 })
          .text(`$${unitPrice.toFixed(2)}`, tableStartX + itemColWidths[0] + itemColWidths[1] + itemColWidths[2] + itemColWidths[3] + 5, yPos + 8, { width: itemColWidths[4] - 10 })

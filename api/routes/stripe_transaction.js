@@ -398,8 +398,9 @@ const createOrder = async (sessionId, data) => {
     const totalAmount = data.amount_total ? data.amount_total / 100 : subtotal + taxAmount + shippingAmount;
 
     // Store tax and shipping info in other_info for later use
-    // Format: city,address,email,phone|tax|shipping|total
-    const otherInfo = `${data.customer_details.address.city},${data.customer_details.address.line1},${data.customer_details.email},${data.customer_details.phone}|${taxAmount}|${shippingAmount}|${totalAmount}`;
+    // Format: name,city,address,email,phone|tax|shipping|total
+    const customerName = data.customer_details.name || 'N/A';
+    const otherInfo = `${customerName},${data.customer_details.address.city},${data.customer_details.address.line1},${data.customer_details.email},${data.customer_details.phone}|${taxAmount}|${shippingAmount}|${totalAmount}`;
 
     const order_info = await Orders.create({
       order_custom_id,
