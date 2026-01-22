@@ -259,7 +259,7 @@ router.get('/:reference_no/confirmation', async (req, res, next) => {
     doc.pipe(writeStream);
 
     // Logo path
-    const logoPath = path.join(__dirname, '../../assets/logo.png');
+    const logoPath = path.join(__dirname, '../../assets/logo.jpeg');
     
     // Header section - Logo with proper aspect ratio
     const logoWidth = 120;
@@ -761,6 +761,14 @@ router.post('/send-review', async (req, res, next) => {
       });
     }
 
+    // Check if review email was already sent
+    if (order.review_email_sent) {
+      return res.status(200).json({
+        response_code: '002',
+        response_message: 'Review email was already sent for this order'
+      });
+    }
+
     // Send review email
     const emailSent = await sendReviewEmail(email, order_reference_no);
 
@@ -770,6 +778,10 @@ router.post('/send-review', async (req, res, next) => {
         response_message: 'Failed to send review email'
       });
     }
+
+    // Mark review email as sent
+    order.review_email_sent = true;
+    await order.save();
 
     res.status(200).json({
       response_code: '000',

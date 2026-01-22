@@ -1069,7 +1069,7 @@ body, table, td, p, a, li, blockquote {
 		<table bgcolor="#383e56" cellpadding="0" cellspacing="0" border="0" align="center" width="640" style="width: 640px; min-width: 640px;" role="presentation" class="table-container ">
 		<tr>
 			<td style="color:#FFFFFF; font-size:14px; line-height:22px; text-align:center;border:none;font-weight:bold;padding:40px 0;">
-				 © 2024 Golden Palm Foods <br>
+				 © 2026 Golden Palm Foods <br>
 			</td>
 		</tr>
 		</table>
@@ -1272,12 +1272,12 @@ exports.sendMailerLiteEmail = async (data) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.MAILERLITE_API_KEY}`,
+        'Authorization': `Bearer ${process.env.MAILERLITE_API_PROD_KEY}`,
         'Accept': 'application/json'
       },
       body: JSON.stringify({
         from: {
-          email: `noreply@${process.env.NO_REPLY}`,
+          email: `noreply@${process.env.NO_REPLY_PROD}`,
           name: 'Golden Palm Foods'
         },
         to: [

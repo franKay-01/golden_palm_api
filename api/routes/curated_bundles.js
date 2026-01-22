@@ -95,7 +95,10 @@ router.get('/type/:bundle_type', async (req, res, next) => {
       : { is_active: true, bundle_type: bundle_type };
 
     const bundles = await CuratedBundles.findAll({
-      where: whereCondition
+      where: whereCondition,
+      order: [
+        [sequelize.cast(sequelize.col('price'), 'DECIMAL'), 'ASC']
+      ]
     });
 
     const bundlesWithProducts = await Promise.all(bundles.map(async (bundle) => {

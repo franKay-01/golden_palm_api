@@ -502,16 +502,29 @@ router.post('/webhook', async (request, response) => {
       const payment_data = event.data.object;
 
       try {
-        const order_id = await createOrder(payment_data.id, payment_data);
+        // Find checkout session associated with this payment intent
+        const checkoutSessions = await stripe.checkout.sessions.list({
+          payment_intent: payment_data.id,
+          limit: 1
+        });
 
-        if (order_id) {
-          console.log('Order created successfully, sending email...');
-          await sendSalesEmail(payment_data.customer_details.email, order_id);
+        if (checkoutSessions.data.length > 0) {
+          const checkoutSessionId = checkoutSessions.data[0].id;
+          const checkoutSessionData = checkoutSessions.data[0];
+
+          const order_id = await createOrder(checkoutSessionId, checkoutSessionData);
+
+          if (order_id) {
+            console.log('Order created successfully from payment_intent, sending email...');
+            await sendSalesEmail(checkoutSessionData.customer_details.email, order_id);
+          } else {
+            console.error('Order creation failed, skipping email');
+          }
         } else {
-          console.error('Order creation failed, skipping email');
+          console.log('No checkout session found for payment intent:', payment_data.id);
         }
       } catch (err) {
-        console.error('Error in webhook handler:', err);
+        console.error('Error in payment_intent webhook handler:', err);
       }
       break;
     case 'checkout.session.completed':
