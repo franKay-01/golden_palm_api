@@ -125,7 +125,7 @@ app.use('/cooking-classes', cookingClasses)
 
 app.use((req, res, next) => {
   const error = new Error('Not Found');
-  error.status = 404;
+  error.status = 444;
   next(error);
 })
 

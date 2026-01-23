@@ -92,7 +92,7 @@ exports.sendSalesEmail = async (recipient, reference_no) => {
 
   // Parse address from other_info
   const addressParts = orders.other_info ? orders.other_info.split(',') : [];
-  const deliveryAddress = addressParts.length >= 2 ? `${addressParts[1]}, ${addressParts[0]}` : 'N/A';
+  const deliveryAddress = addressParts.length >= 2 ? `${addressParts[1]}, ${addressParts[2]}` : 'N/A';
   const customerEmail = addressParts.length >= 3 ? addressParts[2] : orders.user_reference_no;
 
   let newContent = `
@@ -854,7 +854,7 @@ exports.sendTrackingEmail = async (reference_no, trackingId) => {
 
   // Parse address from other_info
   const addressParts = orders.other_info ? orders.other_info.split(',') : [];
-  const customerEmail = addressParts.length >= 3 ? addressParts[2] : orders.user_reference_no;
+  const customerEmail = addressParts.length >= 3 ? addressParts[3] : orders.user_reference_no;
 
   let content = `
   <!DOCTYPE html>
@@ -1266,7 +1266,6 @@ exports.sendReviewEmail = async (email, order_reference_no) => {
 }
 
 exports.sendMailerLiteEmail = async (data) => {
-  console.log(`Bearer ${process.env.MAILERLITE_API_KEY}`)
   try {
     const response = await fetch('https://api.mailersend.com/v1/email', {
       method: 'POST',
