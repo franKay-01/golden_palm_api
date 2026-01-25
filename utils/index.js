@@ -1267,6 +1267,8 @@ exports.sendReviewEmail = async (email, order_reference_no) => {
 
 exports.sendMailerLiteEmail = async (data) => {
   try {
+    console.log("MAILERLITE_API_PROD_KEY ", process.env.MAILERLITE_API_PROD_KEY)
+    console.log("NO_REPLY_PROD ", process.env.NO_REPLY_PROD)
     const response = await fetch('https://api.mailersend.com/v1/email', {
       method: 'POST',
       headers: {
