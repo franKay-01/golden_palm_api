@@ -49,8 +49,8 @@ const calculatedShippingCost = async (fromZip, toZip, weight = 20) => {
     const distance = getDistance(fromZip, toZip);
 
     if (!distance) {
-      console.log("Distance calculation failed");
-      return "Not Found";
+      console.log("Distance calculation failed, defaulting to $10 shipping");
+      return 10.00;
     }
 
     // Convert distance to a USPS-like zone
@@ -77,7 +77,7 @@ const calculatedShippingCost = async (fromZip, toZip, weight = 20) => {
     return shippingCost;
   } catch (error) {
     console.error('Error calculating shipping:', error);
-    return "Not Found";
+    return 10.00;
   }
 };
 
