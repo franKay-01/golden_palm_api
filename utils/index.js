@@ -525,7 +525,7 @@ body, table, td, p, a, li, blockquote {
     content: newContent,
     subject
   }
-  this.sendMailerLiteEmail(param)
+  this.sendSMTP2GOEmail(param)
 }
 
 exports.sendTokenEmail = async (recipient, token) => {
@@ -1094,7 +1094,7 @@ body, table, td, p, a, li, blockquote {
     subject
   }
 
-  return await this.sendMailerLiteEmail(param);
+  return await this.sendSMTP2GOEmail(param);
 }
 
 exports.sendReviewEmail = async (email, order_reference_no) => {
@@ -1253,7 +1253,7 @@ exports.sendReviewEmail = async (email, order_reference_no) => {
   `;
 
   try {
-    await this.sendMailerLiteEmail({
+    await this.sendSMTP2GOEmail({
       recipient: email,
       subject: `We'd Love Your Feedback - Order #${orders.order_custom_id}`,
       content: content
@@ -1267,8 +1267,6 @@ exports.sendReviewEmail = async (email, order_reference_no) => {
 
 exports.sendMailerLiteEmail = async (data) => {
   try {
-    console.log("MAILERLITE_API_PROD_KEY ", process.env.MAILERLITE_API_PROD_KEY)
-    console.log("NO_REPLY_PROD ", process.env.NO_REPLY_PROD)
     const response = await fetch('https://api.mailersend.com/v1/email', {
       method: 'POST',
       headers: {
@@ -1320,6 +1318,51 @@ exports.sendMailerLiteEmail = async (data) => {
     return true;
   } catch (error) {
     console.error('MailerSend Error:', error);
+    return false;
+  }
+}
+
+exports.sendSMTP2GOEmail = async (data) => {
+  try {
+    const response = await fetch('https://api.smtp2go.com/v3/email/send', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Smtp2go-Api-Key': process.env.SMTP2GO_API_KEY,
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({
+        sender: `noreply@${process.env.NO_REPLY_PROD}`,
+        to: [data.recipient],
+        subject: data.subject,
+        html_body: data.content
+      })
+    });
+
+    console.log('SMTP2GO Response Status:', response.status);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('SMTP2GO API Error:', {
+        status: response.status,
+        statusText: response.statusText,
+        body: errorText
+      });
+      return false;
+    }
+
+    const result = await response.json();
+    console.log('Email sent via SMTP2GO:', result);
+
+    // SMTP2GO returns success in the response data
+    if (result.data && result.data.succeeded > 0) {
+      console.log('Email sent successfully via SMTP2GO');
+      return true;
+    }
+
+    return false;
+  } catch (error) {
+    console.error('SMTP2GO Error:', error);
     return false;
   }
 }
