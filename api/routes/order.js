@@ -52,7 +52,7 @@ router.get('/', async (req, res, next) => {
       }
     }
 
-    return res.json({
+    return res.status(200).json({
       response_code: '000',
       orders,
       response_message: 'Orders retrieved successfully'
@@ -195,7 +195,6 @@ router.get('/:reference_no/confirmation', async (req, res, next) => {
       });
     }
 
-    console.log("ORDER ", JSON.stringify(order))
     // Manually fetch products/bundles for each order item
     if (order.orderItems) {
       for (const item of order.orderItems) {
@@ -605,7 +604,7 @@ router.get('/:reference_no', async (req, res, next) => {
       }
     }
 
-    return res.json({
+    return res.status(200).json({
       response_code: "000",
       orders
     })
