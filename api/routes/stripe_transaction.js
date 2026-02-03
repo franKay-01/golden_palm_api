@@ -233,7 +233,7 @@ router.post('/create-checkout-session', async (req, res) => {
         actualPrice = parseFloat(product.price);
       } else if (item.type === 'bundle') {
         const bundle = await CuratedBundles.findOne({
-          where: { reference_no: item.id }
+          where: { bundle_id: item.id }
         });
 
         if (!bundle) {
