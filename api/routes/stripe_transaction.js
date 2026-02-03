@@ -292,15 +292,8 @@ router.post('/create-checkout-session', async (req, res) => {
 
     const shippingCost = await calculatedShippingCost(OriginalZipCode, zipcode)
 
-    if (shippingCost === "Not Found" || !shippingCost) {
-      return res.status(400).json({
-        response_code: 301,
-        error: 'Invalid zipcode. Could not calculate shipping cost.'
-      });
-    }
-
-    // Calculate 3% of total order amount and add it to shipping cost
-    const additionalFee = totalPrice * 0.03;
+    // Calculate 3% of total order amount (including shipping) and add it to shipping cost
+    const additionalFee = (totalPrice + shippingCost) * 0.03;
     const shippingCostWithFee = shippingCost + additionalFee;
 
     const session = await stripe.checkout.sessions.create({
