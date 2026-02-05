@@ -285,12 +285,30 @@ router.post('/create-checkout-session', async (req, res) => {
 
     let totalWeight = 0;
     let totalPrice = 0;
+    let totalItems = 0;
     for (const item of cart) {
       totalWeight += parseInt(item.weight, 10);
       totalPrice += parseFloat(item.unit_price) * item.quantity;
+      totalItems += item.quantity;
     }
 
-    const shippingCost = await calculatedShippingCost(OriginalZipCode, zipcode)
+    // Check if order has 20 or more items
+    if (totalItems >= 20) {
+      return res.status(200).json({
+        response_code: 305,
+        msg: 'For orders of 20 or more items, please contact us directly for a custom shipping quote.'
+      });
+    }
+
+    // Calculate shipping cost based on number of items
+    let shippingCost;
+    if (totalItems >= 1 && totalItems <= 2) {
+      shippingCost = 8.00;
+    } else if (totalItems >= 3 && totalItems <= 4) {
+      shippingCost = 10.00;
+    } else {
+      shippingCost = 13.00; // 5-9 items
+    }
 
     // Calculate 3% of total order amount (including shipping) and add it to shipping cost
     const additionalFee = (totalPrice + shippingCost) * 0.03;
