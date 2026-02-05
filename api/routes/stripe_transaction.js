@@ -411,8 +411,8 @@ const createOrder = async (sessionId, data) => {
     // Store tax and shipping info in other_info for later use
     // Format: name,city,address,email,phone|tax|shipping|total
     const customerName = data.customer_details.name || 'N/A';
-    console.log("INFO ", JSON.stringify(data.customer_details))
-    const otherInfo = `${customerName},${data.shipping_details.address.city},${data.shipping_details.address.line1},${data.customer_details.email},${data.customer_details.phone}|${taxAmount}|${shippingAmount}|${totalAmount}`;
+    const shippingAddress = data.shipping_details?.address || data.customer_details?.address || {};
+    const otherInfo = `${customerName},${shippingAddress.city || 'N/A'},${shippingAddress.line1 || 'N/A'},${data.customer_details.email},${data.customer_details.phone}|${taxAmount}|${shippingAmount}|${totalAmount}`;
 
     const order_info = await Orders.create({
       order_custom_id,
@@ -523,7 +523,7 @@ router.post('/webhook', async (request, response) => {
 
         if (checkoutSessions.data.length > 0) {
           const checkoutSessionId = checkoutSessions.data[0].id;
-          const checkoutSessionData = checkoutSessions.data[0];
+          const checkoutSessionData = await stripe.checkout.sessions.retrieve(checkoutSessionId);
 
           const order_id = await createOrder(checkoutSessionId, checkoutSessionData);
 
