@@ -525,6 +525,11 @@ router.post('/webhook', async (request, response) => {
           const checkoutSessionId = checkoutSessions.data[0].id;
           const checkoutSessionData = await stripe.checkout.sessions.retrieve(checkoutSessionId);
 
+          // Use shipping from payment intent if checkout session lacks it
+          if (!checkoutSessionData.shipping_details && payment_data.shipping) {
+            checkoutSessionData.shipping_details = payment_data.shipping;
+          }
+
           const order_id = await createOrder(checkoutSessionId, checkoutSessionData);
 
           if (order_id) {
