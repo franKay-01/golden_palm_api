@@ -387,13 +387,6 @@ router.post('/create-checkout-session', async (req, res) => {
 
 const createOrder = async (sessionId, data) => {
   // Retrieve checkout session from database
-  console.log("\n\n\n\n ############# DATA ###############\n", JSON.stringify(data))
-
-  console.error('Error details:', {
-    message: "Checking data"
-  });
-  return false
-
   const checkoutSession = await CheckoutSessions.findOne({
     where: { stripe_session_id: sessionId }
   });
@@ -413,19 +406,19 @@ const createOrder = async (sessionId, data) => {
 
   // Check if order already exists in DB (prevent duplicates)
   // Look for same email and amount created in the last 5 minutes
-  const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-  const existingOrder = await Orders.findOne({
-    where: {
-      user_reference_no,
-      amount: totalAmount,
-      createdAt: { [Op.gte]: fiveMinutesAgo }
-    }
-  });
+  // const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+  // const existingOrder = await Orders.findOne({
+  //   where: {
+  //     user_reference_no,
+  //     amount: totalAmount,
+  //     createdAt: { [Op.gte]: fiveMinutesAgo }
+  //   }
+  // });
 
-  if (existingOrder) {
-    console.log('Duplicate order detected for:', user_reference_no, 'amount:', totalAmount);
-    return null;
-  }
+  // if (existingOrder) {
+  //   console.log('Duplicate order detected for:', user_reference_no, 'amount:', totalAmount);
+  //   return null;
+  // }
 
   const randomSuffix = Math.random().toString(36).substring(2, 8).toUpperCase()
   const order_custom_id = dateFormat() + '-' + randomSuffix
@@ -520,11 +513,6 @@ router.post('/webhook', async (request, response) => {
   const sig = request.headers['stripe-signature'];
   const endpointSecret = process.env.STRIPE_SECRET;
   let event;
-
-  console.log("STRIPE WEBHOOK RECEIVED");
-  console.log("Body type:", typeof request.body);
-  console.log("Has signature:", !!sig);
-  console.log("Has secret:", !!endpointSecret);
 
   try {
     event = stripe.webhooks.constructEvent(request.body, sig, endpointSecret);

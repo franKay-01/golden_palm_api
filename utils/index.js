@@ -74,11 +74,20 @@ exports.sendSalesEmail = async (recipient, reference_no) => {
       itemName += ` - Includes: ${bundleContents.map(p => p.product_name).join(', ')}`;
     }
 
+    // Get product image URL (for bundles, fallback to first product's image if bundle image not set)
+    let imageUrl = details.img_url || details.image_url || '';
+    if (!imageUrl && item.item_type === 'bundle' && bundleContents.length > 0) {
+      imageUrl = bundleContents[0].product_img_url || '';
+    }
+
     orderItemsHtml += `
     <tr>
       <td bgcolor="#FFF" width="40" align="left" style="color:#5a5a5a;padding:10px 0 10px 0;font-family: 'Lato', Arial, Helvetica, sans-serif;font-weight:bold;font-size:14px;-webkit-font-smoothing:antialiased;line-height:1.4;">
       </td>
-      <td bgcolor="#FFFFFF" align="left" style="color:#5a5a5a;padding:10px 40px 10px 40px;font-family: 'Lato', Arial, Helvetica, sans-serif;font-weight:normal;font-size:14px;-webkit-font-smoothing:antialiased;line-height:1.4;">
+      <td bgcolor="#FFFFFF" width="80" align="center" style="padding:10px 10px 10px 10px;">
+         ${imageUrl ? `<img src="https://api.goldenpalmfoods.com/${imageUrl}" alt="${itemName}" width="60" height="60" style="width:60px;height:60px;object-fit:cover;border-radius:4px;" />` : ''}
+      </td>
+      <td bgcolor="#FFFFFF" align="left" style="color:#5a5a5a;padding:10px 20px 10px 10px;font-family: 'Lato', Arial, Helvetica, sans-serif;font-weight:normal;font-size:14px;-webkit-font-smoothing:antialiased;line-height:1.4;">
          ${itemName} (${item.quantity || 1})
       </td>
       <td bgcolor="#FFFFFF" align="right" style="color:#5a5a5a;padding:10px 40px 10px 40px;font-family: 'Lato', Arial, Helvetica, sans-serif;font-weight:bold;font-size:14px;-webkit-font-smoothing:antialiased;line-height:1.4;">
@@ -268,7 +277,6 @@ body, table, td, p, a, li, blockquote {
 <tbody>
 <tr>
 	<td style="display:none;font-size:0;line-height:0;color:#111111;">
-		 Sit amet, consectetur, adipisci velit, sed quia non numquam eius modi tempora incidunt ut labore et dolore magnam aliquam quaerat
 	</td>
 </tr>
 <tr>
@@ -342,13 +350,8 @@ body, table, td, p, a, li, blockquote {
 			</td>
 		</tr>
 		<tr>
-			<td align="center" style="color:#45535C;padding:20px 40px 0 40px;font-family: 'Lato', Arial, Helvetica, sans-serif;font-weight:800;font-size:18px;-webkit-font-smoothing:antialiased;line-height:1.2;" class="table-container mobile-title">
+			<td align="center" style="color:#45535C;padding:20px 40px 0 40px;font-family: 'Lato', Arial, Helvetica, sans-serif;font-weight:500;font-size:12px;-webkit-font-smoothing:antialiased;line-height:1.2;" class="table-container mobile-title">
 				 Here’s what you purchased
-			</td>
-		</tr>
-		<tr>
-			<td align="center" style="color:#5a5a5a;padding:20px 40px 0 40px;font-family: 'Lato', Arial, Helvetica, sans-serif;font-weight:normal;font-size:14px;-webkit-font-smoothing:antialiased;line-height:1.4;" class="table-container">
-				 Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit.
 			</td>
 		</tr>
 		</tbody>
