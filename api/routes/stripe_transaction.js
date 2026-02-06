@@ -5,7 +5,8 @@ const zipcode = require('zipcodes');
 const router = express.Router();
 require('dotenv').config();
 
-const { StripeTransactionInfo, Orders, OrderItems, ShippingItemPrice, CheckoutSessions, Products, CuratedBundles, sequelize } = require('../../models');
+const { StripeTransactionInfo, Orders, OrderItems, ShippingItemPrice, CheckoutSessions, Products, CuratedBundles, sequelize, Sequelize } = require('../../models');
+const { Op } = Sequelize;
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 // const stripe = require('stripe')(process.env.STRIPE_KEY);
 const { authenticateJWT } = require("../../middleware/authenticate");
@@ -386,6 +387,13 @@ router.post('/create-checkout-session', async (req, res) => {
 
 const createOrder = async (sessionId, data) => {
   // Retrieve checkout session from database
+  console.log("\n\n\n\n ############# DATA ###############\n", JSON.stringify(data))
+
+  console.error('Error details:', {
+    message: "Checking data"
+  });
+  return false
+
   const checkoutSession = await CheckoutSessions.findOne({
     where: { stripe_session_id: sessionId }
   });
@@ -395,18 +403,34 @@ const createOrder = async (sessionId, data) => {
   }
 
   const Items = checkoutSession.cart_data;
+  const user_reference_no = data.customer_details.email;
 
-  const user_reference_no = data.customer_details.email
+  // Extract amounts first for duplicate check
+  const subtotal = data.amount_subtotal ? data.amount_subtotal / 100 : 0;
+  const taxAmount = data.total_details?.amount_tax ? data.total_details.amount_tax / 100 : 0;
+  const shippingAmount = data.total_details?.amount_shipping ? data.total_details.amount_shipping / 100 : 0;
+  const totalAmount = data.amount_total ? data.amount_total / 100 : subtotal + taxAmount + shippingAmount;
+
+  // Check if order already exists in DB (prevent duplicates)
+  // Look for same email and amount created in the last 5 minutes
+  const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+  const existingOrder = await Orders.findOne({
+    where: {
+      user_reference_no,
+      amount: totalAmount,
+      createdAt: { [Op.gte]: fiveMinutesAgo }
+    }
+  });
+
+  if (existingOrder) {
+    console.log('Duplicate order detected for:', user_reference_no, 'amount:', totalAmount);
+    return null;
+  }
+
   const randomSuffix = Math.random().toString(36).substring(2, 8).toUpperCase()
   const order_custom_id = dateFormat() + '-' + randomSuffix
 
   try {
-    // Extract tax and shipping information from Stripe checkout session
-    // When automatic_tax is enabled, these fields are available:
-    const subtotal = data.amount_subtotal ? data.amount_subtotal / 100 : 0;
-    const taxAmount = data.total_details?.amount_tax ? data.total_details.amount_tax / 100 : 0;
-    const shippingAmount = data.total_details?.amount_shipping ? data.total_details.amount_shipping / 100 : 0;
-    const totalAmount = data.amount_total ? data.amount_total / 100 : subtotal + taxAmount + shippingAmount;
 
     // Store tax and shipping info in other_info for later use
     // Format: name,city,address,email,phone|tax|shipping|total
