@@ -526,8 +526,7 @@ body, table, td, p, a, li, blockquote {
 		<table bgcolor="#383e56" cellpadding="0" cellspacing="0" border="0" align="center" width="640" style="width: 640px; min-width: 640px;" role="presentation" class="table-container ">
 		<tr>
 			<td style="color:#FFFFFF; font-size:14px; line-height:22px; text-align:center;border:none;font-weight:bold;">
-				 Street Address, Town/City, State ZIP <br>
-				 © 2021 Your Company, Inc. <br>
+				 © 2026 Golden Palm Foods. <br>
 				<br>
 			</td>
 		</tr>
