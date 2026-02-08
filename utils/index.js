@@ -1090,7 +1090,7 @@ body, table, td, p, a, li, blockquote {
 		<tbody>
 		<tr>
 			<td align="center" style="padding:0 40px;">
-				<a href="https://www.usps.com/track/" target="_blank" style="display:inline-block;background-color:#383e56;color:#FFFFFF;padding:15px 30px;text-decoration:none;font-family: 'Lato', Arial, Helvetica, sans-serif;font-weight:bold;font-size:16px;border-radius:5px;">
+				<a href=https://tools.usps.com/go/TrackConfirmAction?tLabels=${trackingId}" target="_blank" style="display:inline-block;background-color:#383e56;color:#FFFFFF;padding:15px 30px;text-decoration:none;font-family: 'Lato', Arial, Helvetica, sans-serif;font-weight:bold;font-size:16px;border-radius:5px;">
 					Track Your Package
 				</a>
 			</td>
