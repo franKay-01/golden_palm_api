@@ -238,7 +238,7 @@ router.post('/', authenticateAdmin,
 });
 
 // Update cooking class
-router.patch('/:class_id', authenticateAdmin, upload.single('image'), async (req, res, next) => {
+router.put('/:class_id', authenticateAdmin, upload.single('image'), async (req, res, next) => {
   const class_id = req.params.class_id;
   const { name, url, date, amount, is_upcoming } = req.body;
 

@@ -378,7 +378,6 @@ router.get('/:reference_no/confirmation', async (req, res, next) => {
        .text('SHIP VIA', tableStartX + colWidths[0] + 5, yPos + 8, { width: colWidths[1] - 10 })
        .text('ORDER DATE', tableStartX + colWidths[0] + colWidths[1] + 5, yPos + 8, { width: colWidths[2] - 10 })
        .text('SHIP DATE', tableStartX + colWidths[0] + colWidths[1] + colWidths[2] + 5, yPos + 8, { width: colWidths[3] - 10 })
-       .text('TERMS', tableStartX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + 5, yPos + 8, { width: colWidths[4] - 10 });
 
     doc.fillColor('black');
 
@@ -392,10 +391,9 @@ router.get('/:reference_no/confirmation', async (req, res, next) => {
        .font('Helvetica')
        .fillColor('black')
        .text(order.user_reference_no || 'N/A', tableStartX + 5, yPos + 8, { width: colWidths[0] - 10 })
-       .text('UPS', tableStartX + colWidths[0] + 5, yPos + 8, { width: colWidths[1] - 10 })
+       .text('USPS', tableStartX + colWidths[0] + 5, yPos + 8, { width: colWidths[1] - 10 })
        .text(orderDate.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' }), tableStartX + colWidths[0] + colWidths[1] + 5, yPos + 8, { width: colWidths[2] - 10 })
-       .text(shipDate.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' }), tableStartX + colWidths[0] + colWidths[1] + colWidths[2] + 5, yPos + 8, { width: colWidths[3] - 10 })
-       .text('VISA', tableStartX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + 5, yPos + 8, { width: colWidths[4] - 10 });
+       .text('5 - 7 days', tableStartX + colWidths[0] + colWidths[1] + colWidths[2] + 5, yPos + 8, { width: colWidths[3] - 10 })
 
     // Item details table header
     yPos += 30;
@@ -501,22 +499,22 @@ router.get('/:reference_no/confirmation', async (req, res, next) => {
        .text(`TOTAL:`, tableStartX + 350, yPos + 56, { width: 100 })
        .text(`$${total.toFixed(2)}`, tableStartX + 450, yPos + 56, { width: 80, align: 'right' });
 
-    // Notes section - adjust spacing to fit on one page
-    yPos += 75; // Increased spacing after financial summary
-    doc.moveTo(tableStartX, yPos)
-       .lineTo(tableStartX + 480, yPos)
-       .stroke();
+    // // Notes section - adjust spacing to fit on one page
+    // yPos += 75; // Increased spacing after financial summary
+    // doc.moveTo(tableStartX, yPos)
+    //    .lineTo(tableStartX + 480, yPos)
+    //    .stroke();
 
-    yPos += 12;
-    doc.fontSize(9)
-       .font('Helvetica')
-       .fillColor('black')
-       .text('NOTE:', tableStartX, yPos, { width: 480 })
-       .text(`DELIVERY TIME 1 BUSINESS DAY VIA UPS GROUND.`, tableStartX, yPos + 14, { width: 480 })
-       .text(`SHIPMENT #1 WILL SHIP ${shipDate.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' })}`, tableStartX, yPos + 28, { width: 480 })
-       .text(`ATTENTION: ${order.user_reference_no}`, tableStartX, yPos + 42, { width: 480 })
-       .text(`T - DENOTES A TAXABLE ITEM`, tableStartX, yPos + 56, { width: 480 })
-       .text(`THANK YOU FOR YOUR ORDER. GOLDEN PALM FOODS' TERMS AND CONDITIONS APPLY.`, tableStartX, yPos + 70, { width: 480 });
+    // yPos += 12;
+    // doc.fontSize(9)
+    //    .font('Helvetica')
+    //    .fillColor('black')
+    //    .text('NOTE:', tableStartX, yPos, { width: 480 })
+    //    .text(`DELIVERY TIME 1 BUSINESS DAY VIA UPS GROUND.`, tableStartX, yPos + 14, { width: 480 })
+    //    .text(`SHIPMENT #1 WILL SHIP ${shipDate.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' })}`, tableStartX, yPos + 28, { width: 480 })
+    //    .text(`ATTENTION: ${order.user_reference_no}`, tableStartX, yPos + 42, { width: 480 })
+    //    .text(`T - DENOTES A TAXABLE ITEM`, tableStartX, yPos + 56, { width: 480 })
+    //    .text(`THANK YOU FOR YOUR ORDER. GOLDEN PALM FOODS' TERMS AND CONDITIONS APPLY.`, tableStartX, yPos + 70, { width: 480 });
 
     // Footer - position dynamically based on content, ensure it's within page bounds
     // Letter size: 792 points, margins: 50 top/bottom = 692 usable height
