@@ -430,7 +430,7 @@ const createOrder = async (sessionId, data) => {
     const customerName = data.customer_details.name || 'N/A';
     const shippingAddress = data.shipping_details?.address || data.customer_details?.address || {};
     const addressLine1 = (shippingAddress.line1 || 'N/A').replace(/,/g, '');
-    const otherInfo = `${customerName}|${shippingAddress.city || 'N/A'},${addressLine1},${data.customer_details.email},${data.customer_details.phone}|${taxAmount}|${shippingAmount}|${totalAmount}`;
+    const otherInfo = `${customerName},${shippingAddress.city || 'N/A'},${addressLine1},${data.customer_details.email},${data.customer_details.phone}|${taxAmount}|${shippingAmount}|${totalAmount}`;
 
     const order_info = await Orders.create({
       order_custom_id,
