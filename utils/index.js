@@ -102,7 +102,10 @@ exports.sendSalesEmail = async (recipient, reference_no) => {
   const addressParts = orders.other_info ? orders.other_info.split(',') : [];
   const deliveryAddress = addressParts.length >= 2 ? `${addressParts[1]}, ${addressParts[2]}` : 'N/A';
   const customerEmail = addressParts.length >= 3 ? addressParts[2] : orders.user_reference_no;
-
+  const taxAmountInfo = addressParts[4].split('|')
+  const taxInfo = taxAmountInfo[1] || 'N/A'
+  const shippingAmount = taxAmountInfo[2] || 'N/A'
+  
   let newContent = `
   <!DOCTYPE html>
 <html lang="en">
@@ -407,7 +410,7 @@ body, table, td, p, a, li, blockquote {
 					 Shipping
 				</td>
 				<td bgcolor="#FFFFFF" align="right" style="color:#5a5a5a;padding:10px 40px 10px 40px;font-family: 'Lato', Arial, Helvetica, sans-serif;font-weight:normal;font-size:14px;-webkit-font-smoothing:antialiased;line-height:1.4;" class="table-container">
-					 $${parseFloat(orders.shipping_amount || 0).toFixed(2)}
+					 $${parseFloat(shippingAmount || 0).toFixed(2)}
 				</td>
 				<td bgcolor="#FFF" width="40" align="left" style="color:#5a5a5a;padding:10px 0 10px 0;font-family: 'Lato', Arial, Helvetica, sans-serif;font-weight:bold;font-size:14px;-webkit-font-smoothing:antialiased;line-height:1.4;">
 				</td>
@@ -419,7 +422,7 @@ body, table, td, p, a, li, blockquote {
 					 Tax
 				</td>
 				<td bgcolor="#FFFFFF" align="right" style="color:#5a5a5a;padding:10px 40px 10px 40px;font-family: 'Lato', Arial, Helvetica, sans-serif;font-weight:normal;font-size:14px;-webkit-font-smoothing:antialiased;line-height:1.4;" class="table-container">
-					 $${parseFloat(orders.tax_amount || 0).toFixed(2)}
+					 $${parseFloat(taxInfo || 0).toFixed(2)}
 				</td>
 				<td bgcolor="#FFF" width="40" align="left" style="color:#5a5a5a;padding:10px 0 10px 0;font-family: 'Lato', Arial, Helvetica, sans-serif;font-weight:bold;font-size:14px;-webkit-font-smoothing:antialiased;line-height:1.4;">
 				</td>
