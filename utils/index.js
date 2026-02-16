@@ -98,13 +98,19 @@ exports.sendSalesEmail = async (recipient, reference_no) => {
     </tr>`;
   });
 
-  // Parse address from other_info
-  const addressParts = orders.other_info ? orders.other_info.split(',') : [];
-  const deliveryAddress = addressParts.length >= 2 ? `${addressParts[1]}, ${addressParts[2]}` : 'N/A';
-  const customerEmail = addressParts.length >= 3 ? addressParts[2] : orders.user_reference_no;
-  const taxAmountInfo = addressParts[4].split('|')
-  const taxInfo = taxAmountInfo[1] || 'N/A'
-  const shippingAmount = taxAmountInfo[2] || 'N/A'
+  // Parse order info from other_info JSON
+  let orderInfo = {};
+  try {
+    orderInfo = orders.other_info ? JSON.parse(orders.other_info) : {};
+  } catch (e) {
+    orderInfo = {};
+  }
+  const shippingAddr = orderInfo.shippingAddress || {};
+  const deliveryAddress = shippingAddr.line1 && shippingAddr.city
+    ? `${shippingAddr.line1}, ${shippingAddr.city}, ${shippingAddr.state || ''} ${shippingAddr.postal_code || ''}`.trim()
+    : 'N/A';
+  const taxInfo = orderInfo.tax || 0;
+  const shippingAmount = orderInfo.shipping || 0;
   
   let newContent = `
   <!DOCTYPE html>
@@ -892,9 +898,14 @@ exports.sendTrackingEmail = async (reference_no, trackingId) => {
     return false;
   }
 
-  // Parse address from other_info
-  const addressParts = orders.other_info ? orders.other_info.split(',') : [];
-  const customerEmail = addressParts.length >= 3 ? addressParts[3] : orders.user_reference_no;
+  // Parse order info from other_info JSON
+  let trackingOrderInfo = {};
+  try {
+    trackingOrderInfo = orders.other_info ? JSON.parse(orders.other_info) : {};
+  } catch (e) {
+    trackingOrderInfo = {};
+  }
+  const customerEmail = trackingOrderInfo.email || orders.user_reference_no;
 
   let content = `
   <!DOCTYPE html>

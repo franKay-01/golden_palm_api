@@ -314,8 +314,7 @@ router.get('/:reference_no/confirmation', async (req, res, next) => {
     // Address section - adjust starting position
     let yPos = logoY + logoHeight + 90; // Start below header section
 
-    // Parse shipping address from other_info if available
-    // Format: city,address,email,phone|tax|shipping|total
+    // Parse shipping address from other_info JSON
     let shippingAddress = {
       company: 'GOLDEN PALM FOODS LLC',
       street: '9 N 125TH AVE',
@@ -324,13 +323,24 @@ router.get('/:reference_no/confirmation', async (req, res, next) => {
     };
 
     if (order.other_info) {
-      // Extract address part (before the | separator)
-      const addressPart = order.other_info.split('|')[0];
-      const addressParts = addressPart.split(',');
-      if (addressParts.length >= 2) {
-        shippingAddress.company = addressParts[0].trim();
-        shippingAddress.cityStateZip = addressParts[1].trim();
-        shippingAddress.street = addressParts[2].trim();
+      try {
+        const info = JSON.parse(order.other_info);
+        const addr = info.shippingAddress || {};
+        if (addr.line1) {
+          shippingAddress.company = info.customerName || 'N/A';
+          shippingAddress.street = addr.line1 + (addr.line2 ? ` ${addr.line2}` : '');
+          shippingAddress.cityStateZip = `${addr.city || ''} ${addr.state || ''} ${addr.postal_code || ''}`.trim();
+          shippingAddress.country = addr.country || 'US';
+        }
+      } catch (e) {
+        // Fallback for legacy format
+        const addressPart = order.other_info.split('|')[0];
+        const addressParts = addressPart.split(',');
+        if (addressParts.length >= 2) {
+          shippingAddress.company = addressParts[0].trim();
+          shippingAddress.cityStateZip = addressParts[1].trim();
+          shippingAddress.street = addressParts[2].trim();
+        }
       }
     }
 
@@ -454,18 +464,27 @@ router.get('/:reference_no/confirmation', async (req, res, next) => {
     // Financial summary
     yPos += 20;
     
-    // Extract tax and shipping from other_info if available
-    // Format: city,address,email,phone|tax|shipping|total
+    // Extract tax and shipping from other_info
     let salesTax = 0;
     let shipping = 11.00; // Default shipping cost
     let total = parseFloat(order.amount) || subtotal;
-    
-    if (order.other_info && order.other_info.includes('|')) {
-      const parts = order.other_info.split('|');
-      if (parts.length >= 4) {
-        salesTax = parseFloat(parts[1]) || 0;
-        shipping = parseFloat(parts[2]) || 11.00;
-        total = parseFloat(parts[3]) || (subtotal + salesTax + shipping);
+
+    if (order.other_info) {
+      try {
+        const info = JSON.parse(order.other_info);
+        salesTax = parseFloat(info.tax) || 0;
+        shipping = parseFloat(info.shipping) || 11.00;
+        total = parseFloat(info.total) || (subtotal + salesTax + shipping);
+      } catch (e) {
+        // Fallback for legacy pipe-delimited format
+        if (order.other_info.includes('|')) {
+          const parts = order.other_info.split('|');
+          if (parts.length >= 4) {
+            salesTax = parseFloat(parts[1]) || 0;
+            shipping = parseFloat(parts[2]) || 11.00;
+            total = parseFloat(parts[3]) || (subtotal + salesTax + shipping);
+          }
+        }
       }
     } else {
       // Fallback: Calculate tax if not stored

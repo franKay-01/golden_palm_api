@@ -54,7 +54,7 @@ module.exports = (sequelize, DataTypes) => {
       }
     },
     other_info:{
-      type: DataTypes.STRING,
+      type: DataTypes.TEXT,
       allowNull: true
     },
     status: {

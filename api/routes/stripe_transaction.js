@@ -425,12 +425,40 @@ const createOrder = async (sessionId, data) => {
 
   try {
 
-    // Store tax and shipping info in other_info for later use
-    // Format: name,city,address,email,phone|tax|shipping|total
+    // Store order details as JSON in other_info
     const customerName = data.customer_details.name || 'N/A';
-    const shippingAddress = data.shipping_details?.address || data.customer_details?.address || {};
-    const addressLine1 = (shippingAddress.line1 || 'N/A').replace(/,/g, '');
-    const otherInfo = `${customerName},${shippingAddress.city || 'N/A'},${addressLine1},${data.customer_details.email},${data.customer_details.phone}|${taxAmount}|${shippingAmount}|${totalAmount}`;
+    const shipping = data.shipping_details?.address || {};
+    const billing = data.customer_details?.address || {};
+
+    // If billing address is incomplete (same as shipping was checked), use shipping address
+    const billingComplete = billing.line1 && billing.city;
+    const billingAddr = billingComplete ? billing : shipping;
+
+    const otherInfo = JSON.stringify({
+      customerName,
+      email: data.customer_details.email,
+      phone: data.customer_details.phone,
+      shippingAddress: {
+        line1: shipping.line1 || 'N/A',
+        line2: shipping.line2 || '',
+        city: shipping.city || 'N/A',
+        state: shipping.state || '',
+        postal_code: shipping.postal_code || '',
+        country: shipping.country || 'US'
+      },
+      billingAddress: {
+        line1: billingAddr.line1 || 'N/A',
+        line2: billingAddr.line2 || '',
+        city: billingAddr.city || 'N/A',
+        state: billingAddr.state || '',
+        postal_code: billingAddr.postal_code || '',
+        country: billingAddr.country || 'US'
+      },
+      billingSameAsShipping: !billingComplete,
+      tax: taxAmount,
+      shipping: shippingAmount,
+      total: totalAmount
+    });
 
     const order_info = await Orders.create({
       order_custom_id,
