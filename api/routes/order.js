@@ -2,12 +2,60 @@ const express = require('express');
 const PDFDocument = require('pdfkit');
 const path = require('path');
 const fs = require('fs');
+const schedule = require('node-schedule');
 
 const router = express.Router();
 
 const { Orders, OrderItems, Products, CuratedBundles, Categories, sequelize } = require('../../models');
 const { dateFormat, sendSalesEmail, sendTrackingEmail, sendReviewEmail } = require('../../utils');
 const { authenticateJWT } = require('../../middleware/authenticate')
+
+// Function to clean up PDF files older than 24 hours
+const cleanupOldPDFs = () => {
+  try {
+    const orderListsDir = path.join(__dirname, '../../uploads/orderLists');
+    
+    if (!fs.existsSync(orderListsDir)) {
+      return; // Directory doesn't exist, nothing to clean
+    }
+
+    const files = fs.readdirSync(orderListsDir);
+    const now = Date.now();
+    const twentyFourHours = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+    let deletedCount = 0;
+
+    files.forEach(file => {
+      if (file.endsWith('.pdf')) {
+        const filePath = path.join(orderListsDir, file);
+        
+        try {
+          const stats = fs.statSync(filePath);
+          const fileAge = now - stats.mtime.getTime();
+
+          if (fileAge > twentyFourHours) {
+            fs.unlinkSync(filePath);
+            deletedCount++;
+            console.log(`Deleted old PDF: ${file}`);
+          }
+        } catch (err) {
+          console.error(`Error processing file ${file}:`, err.message);
+        }
+      }
+    });
+
+    if (deletedCount > 0) {
+      console.log(`Cleanup completed: ${deletedCount} PDF file(s) deleted`);
+    }
+  } catch (err) {
+    console.error('Error during PDF cleanup:', err);
+  }
+};
+
+// Schedule cleanup to run every hour
+schedule.scheduleJob('0 * * * *', cleanupOldPDFs);
+
+// Also run cleanup on startup
+cleanupOldPDFs();
 
 router.get('/', async (req, res, next) => {
   try{
@@ -230,6 +278,9 @@ router.get('/:reference_no/confirmation', async (req, res, next) => {
       fs.mkdirSync(orderListsDir, { recursive: true });
     }
 
+    // Clean up old PDFs (older than 24 hours) when generating new ones
+    cleanupOldPDFs();
+
     // Check if PDF already exists
     const fileName = `order-confirmation-${order.order_custom_id}.pdf`;
     const filePath = path.join(orderListsDir, fileName);
@@ -344,11 +395,11 @@ router.get('/:reference_no/confirmation', async (req, res, next) => {
       }
     }
 
-    // SOLD TO section
+    // SHIP TO section
     doc.fontSize(10)
        .font('Helvetica-Bold')
        .fillColor('black')
-       .text('SOLD TO:', 50, yPos);
+       .text('SHIP TO:', 50, yPos);
 
     doc.font('Helvetica')
        .fillColor('black')
@@ -357,26 +408,14 @@ router.get('/:reference_no/confirmation', async (req, res, next) => {
        .text(shippingAddress.cityStateZip, 50, yPos + 45)
        .text(shippingAddress.country, 50, yPos + 60);
 
-    // SHIP TO section
-    doc.font('Helvetica-Bold')
-       .fillColor('black')
-       .text('SHIP TO:', 300, yPos);
-
-    doc.font('Helvetica')
-       .fillColor('black')
-       .text(shippingAddress.company, 300, yPos + 15)
-       .text(shippingAddress.street, 300, yPos + 30)
-       .text(shippingAddress.cityStateZip, 300, yPos + 45)
-       .text(shippingAddress.country, 300, yPos + 60);
-
     // Order details table header - adjust position
     yPos = yPos + 80; // Add more space after address section
     const tableStartX = 50;
-    const colWidths = [100, 80, 80, 80, 80, 80];
+    const colWidths = [200, 80, 80, 80]; // Increased CUSTOMER column width from 100 to 200
     const headerHeight = 25;
 
-    // Draw header background
-    doc.rect(tableStartX, yPos, 480, headerHeight)
+    // Draw header background - adjust width since we removed TERMS column
+    doc.rect(tableStartX, yPos, 400, headerHeight)
        .fillColor('#445717')
        .fill();
 
@@ -407,10 +446,10 @@ router.get('/:reference_no/confirmation', async (req, res, next) => {
 
     // Item details table header
     yPos += 30;
-    const itemColWidths = [60, 50, 80, 200, 70, 70];
+    const itemColWidths = [60, 80, 200, 70, 70]; // Removed U/M column (was 50)
     const itemHeaderHeight = 25;
 
-    doc.rect(tableStartX, yPos, 530, itemHeaderHeight)
+    doc.rect(tableStartX, yPos, 480, itemHeaderHeight)
        .fillColor('#445717')
        .fill();
 
@@ -418,10 +457,10 @@ router.get('/:reference_no/confirmation', async (req, res, next) => {
        .fontSize(9)
        .font('Helvetica-Bold')
        .text('QUANTITY', tableStartX + 5, yPos + 8, { width: itemColWidths[0] - 10 })
-       .text('ITEM NUMBER', tableStartX + itemColWidths[0] + itemColWidths[1] + 5, yPos + 8, { width: itemColWidths[2] - 10 })
-       .text('DESCRIPTION', tableStartX + itemColWidths[0] + itemColWidths[1] + itemColWidths[2] + 5, yPos + 8, { width: itemColWidths[3] - 10 })
-       .text('UNIT PRICE', tableStartX + itemColWidths[0] + itemColWidths[1] + itemColWidths[2] + itemColWidths[3] + 5, yPos + 8, { width: itemColWidths[4] - 10 })
-       .text('EXT. PRICE', tableStartX + itemColWidths[0] + itemColWidths[1] + itemColWidths[2] + itemColWidths[3] + itemColWidths[4] + 5, yPos + 8, { width: itemColWidths[5] - 10 });
+       .text('ITEM NUMBER', tableStartX + itemColWidths[0] + 5, yPos + 8, { width: itemColWidths[1] - 10 })
+       .text('DESCRIPTION', tableStartX + itemColWidths[0] + itemColWidths[1] + 5, yPos + 8, { width: itemColWidths[2] - 10 })
+       .text('UNIT PRICE', tableStartX + itemColWidths[0] + itemColWidths[1] + itemColWidths[2] + 5, yPos + 8, { width: itemColWidths[3] - 10 })
+       .text('EXT. PRICE', tableStartX + itemColWidths[0] + itemColWidths[1] + itemColWidths[2] + itemColWidths[3] + 5, yPos + 8, { width: itemColWidths[4] - 10 });
 
     doc.fillColor('black');
 
@@ -453,10 +492,10 @@ router.get('/:reference_no/confirmation', async (req, res, next) => {
          .font('Helvetica')
          .fillColor('black')
          .text(quantity.toString(), tableStartX + 5, yPos + 8, { width: itemColWidths[0] - 10 })
-         .text(itemNumber, tableStartX + itemColWidths[0] + itemColWidths[1] + 5, yPos + 8, { width: itemColWidths[2] - 10 })
-         .text(description.substring(0, 50), tableStartX + itemColWidths[0] + itemColWidths[1] + itemColWidths[2] + 5, yPos + 8, { width: itemColWidths[3] - 10 })
-         .text(`$${unitPrice.toFixed(2)}`, tableStartX + itemColWidths[0] + itemColWidths[1] + itemColWidths[2] + itemColWidths[3] + 5, yPos + 8, { width: itemColWidths[4] - 10 })
-         .text(`$${extPrice.toFixed(2)} T`, tableStartX + itemColWidths[0] + itemColWidths[1] + itemColWidths[2] + itemColWidths[3] + itemColWidths[4] + 5, yPos + 8, { width: itemColWidths[5] - 10 });
+         .text(itemNumber, tableStartX + itemColWidths[0] + 5, yPos + 8, { width: itemColWidths[1] - 10 })
+         .text(description.substring(0, 50), tableStartX + itemColWidths[0] + itemColWidths[1] + 5, yPos + 8, { width: itemColWidths[2] - 10 })
+         .text(`$${unitPrice.toFixed(2)}`, tableStartX + itemColWidths[0] + itemColWidths[1] + itemColWidths[2] + 5, yPos + 8, { width: itemColWidths[3] - 10 })
+         .text(`$${extPrice.toFixed(2)} T`, tableStartX + itemColWidths[0] + itemColWidths[1] + itemColWidths[2] + itemColWidths[3] + 5, yPos + 8, { width: itemColWidths[4] - 10 });
 
       yPos += itemRowHeight;
     }
@@ -515,8 +554,8 @@ router.get('/:reference_no/confirmation', async (req, res, next) => {
        .text(`$${shipping.toFixed(2)}`, tableStartX + 450, yPos + 36, { width: 80, align: 'right' })
        .font('Helvetica-Bold')
        .fillColor('black')
-       .text(`TOTAL:`, tableStartX + 350, yPos + 56, { width: 100 })
-       .text(`$${total.toFixed(2)}`, tableStartX + 450, yPos + 56, { width: 80, align: 'right' });
+       .text(`TOTAL:`, tableStartX + 350, yPos + 62, { width: 100 })
+       .text(`$${total.toFixed(2)}`, tableStartX + 450, yPos + 62, { width: 80, align: 'right' });
 
     // // Notes section - adjust spacing to fit on one page
     // yPos += 75; // Increased spacing after financial summary

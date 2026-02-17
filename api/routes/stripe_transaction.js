@@ -317,6 +317,7 @@ router.post('/create-checkout-session', async (req, res) => {
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
+      // billing_address_collection: 'required',
       shipping_address_collection: {
         allowed_countries: ["US"],
       },
@@ -424,6 +425,12 @@ const createOrder = async (sessionId, data) => {
   const order_custom_id = dateFormat() + '-' + randomSuffix
 
   try {
+    console.log("\n\n\n\n#################\n",data.customer_details.name, "\n#################\n\n\n")
+    console.log("\n\n\n\n#################\n",data.shipping_details?.address, "\n#################\n\n\n")
+    console.log("\n\n\n\n#################\n",data.customer_details?.address, "\n#################\n\n\n")
+
+    console.error('Error creating order:');
+    return false
 
     // Store order details as JSON in other_info
     const customerName = data.customer_details.name || 'N/A';
