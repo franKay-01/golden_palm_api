@@ -413,9 +413,15 @@ router.get('/:reference_no/confirmation', async (req, res, next) => {
     const tableStartX = 50;
     const colWidths = [200, 80, 80, 80]; // Increased CUSTOMER column width from 100 to 200
     const headerHeight = 25;
+    
+    // Calculate full page width (Letter: 612pt - 50pt left margin - 50pt right margin = 512pt)
+    const pageWidth = 612;
+    const leftMargin = 50;
+    const rightMargin = 50;
+    const fullWidth = pageWidth - leftMargin - rightMargin; // 512 points
 
-    // Draw header background - adjust width since we removed TERMS column
-    doc.rect(tableStartX, yPos, 400, headerHeight)
+    // Draw header background - full width
+    doc.rect(tableStartX, yPos, fullWidth, headerHeight)
        .fillColor('#445717')
        .fill();
 
@@ -449,7 +455,8 @@ router.get('/:reference_no/confirmation', async (req, res, next) => {
     const itemColWidths = [60, 80, 200, 70, 70]; // Removed U/M column (was 50)
     const itemHeaderHeight = 25;
 
-    doc.rect(tableStartX, yPos, 480, itemHeaderHeight)
+    // Draw header background - full width
+    doc.rect(tableStartX, yPos, fullWidth, itemHeaderHeight)
        .fillColor('#445717')
        .fill();
 
