@@ -429,7 +429,7 @@ router.get('/:reference_no/confirmation', async (req, res, next) => {
     doc.fillColor('white')
        .fontSize(9)
        .font('Helvetica-Bold')
-       .text('CUSTOMER', tableStartX + 5, yPos + 8, { width: colWidths[0] - 10 })
+       .text('CUSTOMER EMAIL', tableStartX + 5, yPos + 8, { width: colWidths[0] - 10 })
        .text('SHIP VIA', tableStartX + colWidths[0] + 5, yPos + 8, { width: colWidths[1] - 10 })
        .text('ORDER DATE', tableStartX + colWidths[0] + colWidths[1] + 5, yPos + 8, { width: colWidths[2] - 10 })
        .text('SHIP DATE', tableStartX + colWidths[0] + colWidths[1] + colWidths[2] + 5, yPos + 8, { width: colWidths[3] - 10 })
