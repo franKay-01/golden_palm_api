@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const {Reviews, Orders, Users, Products, CuratedBundles} = require('../../models');
+const {Reviews, Orders, OrderItems, Users, Products, CuratedBundles} = require('../../models');
 const { authenticateJWT, authenticateAdmin } = require("../../middleware/authenticate");
 
 const errorHandler = (err, res) => {
@@ -18,6 +18,12 @@ router.get('/', async (req, res) => {
         {
           model: Orders,
           as: 'order',
+          include: [
+            {
+              model: OrderItems,
+              as: 'orderItems'
+            }
+          ]
         }
       ],
       order: [['createdAt', 'DESC']]
