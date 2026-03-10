@@ -1,6 +1,6 @@
 const sgMail = require('@sendgrid/mail')
 const jwt = require('jsonwebtoken');
-const { Orders, OrderItems, Products, CuratedBundles } = require('../models');
+const { Orders, OrderItems, Products, CuratedBundles, sequelize } = require('../models');
 require('dotenv').config();
 
 exports.dateFormat = () => {
