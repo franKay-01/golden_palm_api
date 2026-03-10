@@ -86,6 +86,49 @@ router.get('/', async (req, res, next) => {
   }
 })
 
+router.get('/:bundle_id', async (req, res, next) => {
+  const { bundle_id } = req.params;
+  try {
+    const bundle = await CuratedBundles.findOne({
+      where: { bundle_id, is_active: true }
+    });
+
+    if (!bundle) {
+      return res.status(404).json({
+        response_code: '001',
+        response_message: 'Bundle not found'
+      });
+    }
+
+    const bundleData = bundle.toJSON();
+
+    if (bundleData.products && Array.isArray(bundleData.products)) {
+      const productDetails = await Promise.all(bundleData.products.map(async (productId) => {
+        try {
+          const product = await Products.findOne({
+            where: { sku: productId },
+            attributes: ['sku', 'name', 'price', 'img_url', 'is_hot']
+          });
+          return product ? product.toJSON() : null;
+        } catch (error) {
+          console.error(`Error fetching product ${productId}:`, error);
+          return null;
+        }
+      }));
+
+      bundleData.product_details = productDetails.filter(product => product !== null);
+    }
+
+    return res.status(200).json({
+      response_code: '000',
+      bundle: bundleData
+    });
+  } catch (err) {
+    res.status(err.status || 500);
+    res.json({ error: { message: err.message } });
+  }
+});
+
 router.get('/type/:bundle_type', async (req, res, next) => {
   const bundle_type = req.params.bundle_type;
   try{

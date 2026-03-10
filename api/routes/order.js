@@ -843,6 +843,7 @@ router.post('/send-review', async (req, res, next) => {
       response_message: 'Review email sent successfully'
     });
   } catch (err) {
+    console.log("\n\n ERROR ", err)
     res.status(err.status || 500).json({
       response_code: '001',
       error: {
