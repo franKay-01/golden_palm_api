@@ -152,7 +152,7 @@ router.get('/type/:bundle_type', async (req, res, next) => {
           try {
             const product = await Products.findOne({
               where: { sku: productId },
-              attributes: ['sku', 'name', 'price', 'img_url', 'is_hot']
+              attributes: ['sku', 'name', 'price', 'img_url', 'is_hot', 'is_available']
             });
             return product ? product.toJSON() : null;
           } catch (error) {
