@@ -272,7 +272,7 @@ router.post('/status', authenticateJWT, async (req, res, next) => {
 
 router.post('/:bundle_id', authenticateJWT, upload.single('img_url'), async (req, res, next) => {
   const bundle_id = req.params.bundle_id;
-  const {name, description, price, discount_percentage, products, bundle_type} = req.body;
+  const {name, description, price, discount_percentage, products, bundle_type, is_available} = req.body;
 
   try{
     const bundle = await CuratedBundles.findOne({where: { bundle_id } })
@@ -290,6 +290,7 @@ router.post('/:bundle_id', authenticateJWT, upload.single('img_url'), async (req
     if (price) bundle.price = price;
     if (discount_percentage) bundle.discount_percentage = discount_percentage;
     if (bundle_type) bundle.bundle_type = bundle_type;
+    if (is_available !== undefined) bundle.is_available = is_available === 'true' || is_available === true;
 
     // Handle image update
     if (req.file) {
