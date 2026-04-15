@@ -105,6 +105,12 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       defaultValue: true
     },
+    is_available: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true,
+      comment: 'Indicates if product is in stock'
+    },
     weight: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: true,

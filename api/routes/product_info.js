@@ -296,7 +296,7 @@ router.post('/status', authenticateAdmin, async (req, res, next) => {
 
 router.post('/:sku', authenticateAdmin, uploadMultiple.any(), async (req, res, next) => {
   const sku = req.params.sku;
-  const {name, description, price, category_ref_no, slug, ref_color, is_hot, highlights, uses, weight, weight_type, shipping_weight, shipping_weight_type, ingredients, keep_existing_additional_images, metadata} = req.body;
+  const {name, description, price, category_ref_no, slug, ref_color, is_hot, is_available, highlights, uses, weight, weight_type, shipping_weight, shipping_weight_type, ingredients, keep_existing_additional_images, metadata} = req.body;
 
   try{
     const product = await Products.findOne({where: { sku } })
@@ -316,6 +316,7 @@ router.post('/:sku', authenticateAdmin, uploadMultiple.any(), async (req, res, n
     if (category_ref_no) product.category_ref_no = category_ref_no;
     if (slug) product.slug = slug;
     if (is_hot) product.is_hot = is_hot;
+    if (is_available !== undefined) product.is_available = is_available === 'true' || is_available === true;
     if (weight !== undefined) product.weight = weight ? parseFloat(weight) : null;
     if (weight_type) product.weight_type = weight_type;
     if (shipping_weight !== undefined) product.shipping_weight = shipping_weight ? parseFloat(shipping_weight) : null;
