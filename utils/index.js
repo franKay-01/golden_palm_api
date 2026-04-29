@@ -74,6 +74,13 @@ exports.sendSalesEmail = async (recipient, reference_no) => {
       itemName += ` - Includes: ${bundleContents.map(p => p.product_name).join(', ')}`;
     }
 
+    // Note any items that were unavailable when this bundle order was placed
+    let partialBundleNote = '';
+    if (item.item_type === 'bundle' && item.is_partial_bundle && Array.isArray(item.unavailable_items) && item.unavailable_items.length > 0) {
+      const missingNames = item.unavailable_items.map(u => u.name).join(', ');
+      partialBundleNote = `<div style="color:#a94442;font-size:12px;font-style:italic;margin-top:4px;">Note: ${missingNames} ${item.unavailable_items.length === 1 ? 'was' : 'were'} temporarily unavailable and not included in this bundle.</div>`;
+    }
+
     // Get product image URL (for bundles, fallback to first product's image if bundle image not set)
     let imageUrl = details.img_url || details.image_url || '';
     if (!imageUrl && item.item_type === 'bundle' && bundleContents.length > 0) {
@@ -89,6 +96,7 @@ exports.sendSalesEmail = async (recipient, reference_no) => {
       </td>
       <td bgcolor="#FFFFFF" align="left" style="color:#5a5a5a;padding:10px 20px 10px 10px;font-family: 'Lato', Arial, Helvetica, sans-serif;font-weight:normal;font-size:14px;-webkit-font-smoothing:antialiased;line-height:1.4;">
          ${itemName} (${item.quantity || 1})
+         ${partialBundleNote}
       </td>
       <td bgcolor="#FFFFFF" align="right" style="color:#5a5a5a;padding:10px 40px 10px 40px;font-family: 'Lato', Arial, Helvetica, sans-serif;font-weight:bold;font-size:14px;-webkit-font-smoothing:antialiased;line-height:1.4;">
          $${itemTotal.toFixed(2)}
@@ -1190,11 +1198,16 @@ exports.sendReviewEmail = async (email, order_reference_no) => {
         }
       );
 
+      const partialNote = (item.is_partial_bundle && Array.isArray(item.unavailable_items) && item.unavailable_items.length > 0)
+        ? `<br/><small style="color:#a94442;font-style:italic;">Note: ${item.unavailable_items.map(u => u.name).join(', ')} ${item.unavailable_items.length === 1 ? 'was' : 'were'} temporarily unavailable and not included.</small>`
+        : '';
+
       orderItemsHtml += `
         <tr>
           <td style="padding: 15px; border-bottom: 1px solid #eee;">
-            <strong>${item.desc}</strong> (Bundle)<br/>
+            <strong>${item.desc}</strong> (Bundle)${item.is_partial_bundle ? ' <span style="color:#a94442;">(Partial)</span>' : ''}<br/>
             <small style="color: #666;">Contains: ${bundleContents.map(p => p.product_name).join(', ')}</small>
+            ${partialNote}
           </td>
           <td style="padding: 15px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity}</td>
           <td style="padding: 15px; border-bottom: 1px solid #eee; text-align: right;">$${parseFloat(item.unit_amount).toFixed(2)}</td>

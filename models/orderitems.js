@@ -64,6 +64,15 @@ module.exports = (sequelize, DataTypes) => {
     heat_level: {
       type: DataTypes.STRING(50),
       allowNull: true
+    },
+    is_partial_bundle: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false
+    },
+    unavailable_items: {
+      type: DataTypes.JSON,
+      allowNull: true
     }
   }, {
     sequelize,

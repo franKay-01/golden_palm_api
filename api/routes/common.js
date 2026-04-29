@@ -626,6 +626,9 @@ router.get('/products-and-bundles', async (req, res, next) => {
           ]
         });
         bundle.dataValues.product_details = productDetails;
+        bundle.dataValues.unavailable_items = productDetails
+          .filter(p => !p.is_available)
+          .map(p => ({ sku: p.sku, name: p.name }));
       }
     }
 

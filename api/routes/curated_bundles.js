@@ -56,7 +56,7 @@ router.get('/', async (req, res, next) => {
           try {
             const product = await Products.findOne({
               where: { sku: productId },
-              attributes: ['sku', 'name', 'price', 'img_url', 'is_hot']
+              attributes: ['sku', 'name', 'price', 'img_url', 'is_hot', 'is_available']
             });
             return product ? product.toJSON() : null;
           } catch (error) {
@@ -66,6 +66,9 @@ router.get('/', async (req, res, next) => {
         }));
 
         bundleData.product_details = productDetails.filter(product => product !== null);
+        bundleData.unavailable_items = bundleData.product_details
+          .filter(p => !p.is_available)
+          .map(p => ({ sku: p.sku, name: p.name }));
       }
 
       return bundleData;
@@ -107,7 +110,7 @@ router.get('/:bundle_id', async (req, res, next) => {
         try {
           const product = await Products.findOne({
             where: { sku: productId },
-            attributes: ['sku', 'name', 'price', 'img_url', 'is_hot']
+            attributes: ['sku', 'name', 'price', 'img_url', 'is_hot', 'is_available']
           });
           return product ? product.toJSON() : null;
         } catch (error) {
@@ -117,6 +120,9 @@ router.get('/:bundle_id', async (req, res, next) => {
       }));
 
       bundleData.product_details = productDetails.filter(product => product !== null);
+      bundleData.unavailable_items = bundleData.product_details
+        .filter(p => !p.is_available)
+        .map(p => ({ sku: p.sku, name: p.name }));
     }
 
     return res.status(200).json({
@@ -162,6 +168,9 @@ router.get('/type/:bundle_type', async (req, res, next) => {
         }));
 
         bundleData.product_details = productDetails.filter(product => product !== null);
+        bundleData.unavailable_items = bundleData.product_details
+          .filter(p => !p.is_available)
+          .map(p => ({ sku: p.sku, name: p.name }));
       }
 
       return bundleData;

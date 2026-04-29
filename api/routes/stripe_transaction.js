@@ -8,9 +8,10 @@ require('dotenv').config();
 const { StripeTransactionInfo, Orders, OrderItems, ShippingItemPrice, CheckoutSessions, Products, CuratedBundles, sequelize, Sequelize } = require('../../models');
 const { Op } = Sequelize;
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-// const stripe = require('stripe')(process.env.STRIPE_KEY);
+// const stripe = require('stripe')(process.env.TEST_STRIPE_SECRET_KEY);
 const { authenticateJWT } = require("../../middleware/authenticate");
 const { sendSalesEmail, dateFormat } = require('../../utils');
+const bundleService = require('../../services/bundleService');
 
 let percentageChange = 0;
 const OriginalZipCode = '85001';
@@ -244,6 +245,18 @@ router.post('/create-checkout-session', async (req, res) => {
           });
         }
 
+        const bundleContents = await bundleService.resolveBundleContents(bundle);
+        if (!bundleContents.fulfillable) {
+          return res.status(200).json({
+            response_code: 308,
+            msg: `Bundle "${bundle.name}" is currently unavailable — all of its items are out of stock`
+          });
+        }
+        item.bundle_resolution = {
+          available_skus: bundleContents.available.map(p => p.sku),
+          unavailable_items: bundleContents.unavailable.map(p => ({ sku: p.sku, name: p.name }))
+        };
+
         actualPrice = parseFloat(bundle.price);
       } else {
         return res.status(200).json({
@@ -396,6 +409,12 @@ const createOrder = async (sessionId, data) => {
     throw new Error('Checkout session not found');
   }
 
+  // Idempotency guard — if this session was already processed, return the existing order
+  if (checkoutSession.status === 'completed' && checkoutSession.order_reference_no) {
+    console.log('Order already created for session:', sessionId, '— skipping duplicate processing');
+    return null;
+  }
+
   const Items = checkoutSession.cart_data;
   const user_reference_no = data.customer_details.email;
 
@@ -491,7 +510,17 @@ const createOrder = async (sessionId, data) => {
           desc: name || 'Product'
         })
       } else if (type === 'bundle') {
-        // Store bundle as single item
+        // Resolve bundle availability fresh at order time so the order reflects
+        // what was actually shippable at point of payment.
+        const resolution = await bundleService.resolveByBundleId(id);
+        const availableSkus = new Set(
+          resolution ? resolution.available.map(p => p.sku) : []
+        );
+        const unavailableItems = resolution
+          ? resolution.unavailable.map(p => ({ sku: p.sku, name: p.name }))
+          : [];
+        const isPartial = unavailableItems.length > 0;
+
         await OrderItems.create({
           order_reference_no,
           item_reference_no: id,
@@ -499,16 +528,22 @@ const createOrder = async (sessionId, data) => {
           quantity,
           unit_amount: unit_price,
           heat_level,
-          desc: name || 'Bundle'
+          desc: name || 'Bundle',
+          is_partial_bundle: isPartial,
+          unavailable_items: isPartial ? unavailableItems : null
         })
 
-        // Store bundle contents in order_bundle_items
+        // Store bundle contents in order_bundle_items — only the available products
         if (product_details && product_details.length > 0) {
           const orderItem = await OrderItems.findOne({
             where: { order_reference_no, item_reference_no: id }
           });
 
-          for (const bundle_product of product_details) {
+          const shippableProducts = resolution
+            ? product_details.filter(p => availableSkus.has(p.sku))
+            : product_details;
+
+          for (const bundle_product of shippableProducts) {
             await sequelize.query(
               `INSERT INTO order_bundle_items (order_item_id, product_sku, product_name, product_price, product_img_url, is_hot, "createdAt", "updatedAt")
                VALUES (:order_item_id, :product_sku, :product_name, :product_price, :product_img_url, :is_hot, NOW(), NOW())`,
@@ -548,50 +583,29 @@ const createOrder = async (sessionId, data) => {
 router.post('/webhook', async (request, response) => {
   const sig = request.headers['stripe-signature'];
   const endpointSecret = process.env.STRIPE_SECRET;
+  // const endpointSecret = process.env.TEST_STRIPE_SECRET;
+  
   let event;
 
   try {
     event = stripe.webhooks.constructEvent(request.body, sig, endpointSecret);
     console.log("event.type ", event.type)
   } catch (err) {
+    console.error('Webhook signature verification failed.');
+    console.error('  endpointSecret prefix:', endpointSecret ? endpointSecret.slice(0, 10) : '(missing)');
+    console.error('  has signature header:', !!sig);
+    console.error('  body is buffer:', Buffer.isBuffer(request.body));
+    console.error('  error:', err.message);
     response.status(400).send(`Webhook Error: ${err.message}`);
     return;
   }
   
   switch (event.type) {
     case 'payment_intent.succeeded':
-      const payment_data = event.data.object;
-
-      try {
-        // Find checkout session associated with this payment intent
-        const checkoutSessions = await stripe.checkout.sessions.list({
-          payment_intent: payment_data.id,
-          limit: 1
-        });
-
-        if (checkoutSessions.data.length > 0) {
-          const checkoutSessionId = checkoutSessions.data[0].id;
-          const checkoutSessionData = await stripe.checkout.sessions.retrieve(checkoutSessionId);
-
-          // Use shipping from payment intent if checkout session lacks it
-          if (!checkoutSessionData.shipping_details && payment_data.shipping) {
-            checkoutSessionData.shipping_details = payment_data.shipping;
-          }
-
-          const order_id = await createOrder(checkoutSessionId, checkoutSessionData);
-
-          if (order_id) {
-            console.log('Order created successfully from payment_intent, sending email...');
-            await sendSalesEmail(checkoutSessionData.customer_details.email, order_id);
-          } else {
-            console.error('Order creation failed, skipping email');
-          }
-        } else {
-          console.log('No checkout session found for payment intent:', payment_data.id);
-        }
-      } catch (err) {
-        console.error('Error in payment_intent webhook handler:', err);
-      }
+      // Intentionally a no-op for the Checkout flow.
+      // checkout.session.completed is the canonical event that creates the order.
+      // Listening to both would double-process the same payment.
+      console.log('payment_intent.succeeded received — no action (handled by checkout.session.completed)');
       break;
     case 'checkout.session.completed':
       const data = event.data.object;
