@@ -602,27 +602,55 @@ router.post('/webhook', async (request, response) => {
   
   switch (event.type) {
     case 'payment_intent.succeeded':
-      // Intentionally a no-op for the Checkout flow.
-      // checkout.session.completed is the canonical event that creates the order.
-      // Listening to both would double-process the same payment.
-      console.log('payment_intent.succeeded received — no action (handled by checkout.session.completed)');
-      break;
-    case 'checkout.session.completed':
-      const data = event.data.object;
+      const payment_data = event.data.object;
 
       try {
-        const order_id = await createOrder(data.id, data);
+        // Find checkout session associated with this payment intent
+        const checkoutSessions = await stripe.checkout.sessions.list({
+          payment_intent: payment_data.id,
+          limit: 1
+        });
 
-        if (order_id) {
-          console.log('Order created successfully, sending email...');
-          await sendSalesEmail(data.customer_details.email, order_id);
+        if (checkoutSessions.data.length > 0) {
+          const checkoutSessionId = checkoutSessions.data[0].id;
+          const checkoutSessionData = await stripe.checkout.sessions.retrieve(checkoutSessionId);
+
+          // Use shipping from payment intent if checkout session lacks it
+          if (!checkoutSessionData.shipping_details && payment_data.shipping) {
+            checkoutSessionData.shipping_details = payment_data.shipping;
+          }
+
+          const order_id = await createOrder(checkoutSessionId, checkoutSessionData);
+
+          if (order_id) {
+            console.log('Order created successfully from payment_intent, sending email...');
+            await sendSalesEmail(checkoutSessionData.customer_details.email, order_id);
+          } else {
+            console.error('Order creation failed, skipping email');
+          }
         } else {
-          console.error('Order creation failed, skipping email');
+          console.log('No checkout session found for payment intent:', payment_data.id);
         }
       } catch (err) {
-        console.error('Error in webhook handler:', err);
+        console.error('Error in payment_intent webhook handler:', err);
       }
       break;
+    // case 'checkout.session.completed':
+    //   const data = event.data.object;
+
+    //   try {
+    //     const order_id = await createOrder(data.id, data);
+
+    //     if (order_id) {
+    //       console.log('Order created successfully, sending email...');
+    //       await sendSalesEmail(data.customer_details.email, order_id);
+    //     } else {
+    //       console.error('Order creation failed, skipping email');
+    //     }
+    //   } catch (err) {
+    //     console.error('Error in webhook handler:', err);
+    //   }
+    //   break;
     default:
       console.log(`Unhandled event type ${event.type}`);
   }
